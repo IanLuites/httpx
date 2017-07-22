@@ -1,6 +1,6 @@
-# Httpx
+# HTTPX
 
-**TODO: Add description**
+Simple Elixir library with HTTP[S] helpers.
 
 ## Installation
 
