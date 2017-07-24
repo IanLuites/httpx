@@ -4,6 +4,7 @@ defmodule Httpx.Mixfile do
   def project do
     [
       app: :httpx,
+      description: "Simple Elixir library with HTTP[S] helpers.",
       version: "0.0.1",
       elixir: "~> 1.4",
       build_embedded: Mix.env == :prod,
@@ -24,11 +25,11 @@ defmodule Httpx.Mixfile do
 
   def package do
     [
-      name: :analyze,
+      name: :httpx,
       maintainers: ["Ian Luites"],
       licenses: ["MIT"],
       files: [
-        "lib/httpx", "lib/mix", "lib/httpx.ex", "mix.exs", "README*", "LICENSE*", # Elixir
+        "lib/httpx", "lib/httpx.ex", "mix.exs", "README*", "LICENSE*", # Elixir
       ],
       links: %{
         "GitHub" => "https://github.com/IanLuites/httpx",
@@ -44,6 +45,9 @@ defmodule Httpx.Mixfile do
     [
       {:hackney, "1.8.0"}, # Specific version to prevent pool error.
       {:poison, "~> 3.1"},
+
+      # Dev / Test
+      {:analyze, ">= 0.0.6", only: [:dev, :test], runtime: false},
     ]
   end
 end
