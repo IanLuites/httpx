@@ -3,7 +3,10 @@ defmodule HTTPX do
   Simple HTTP(s) client with integrated auth methods.
   """
 
+  alias HTTPX.RequestError
   alias HTTPX.Response
+
+  @type post_body :: String.t | {:urlencoded, map | keyword} | {:json, map | keyword | String.t}
 
   @default_auth [
     basic: HTTPX.Auth.Basic
@@ -18,6 +21,7 @@ defmodule HTTPX do
   ]
 
   @post_header_urlencoded {"Content-Type", "application/x-www-form-urlencoded"}
+  @post_header_json {"Content-Type", "application/json"}
 
   @dialyzer {
     [:no_return, :no_match, :nowarn_function],
@@ -40,7 +44,7 @@ defmodule HTTPX do
 
   For options see: `&request/3`.
   """
-  @spec post(String.t, {:urlencoded, String.t} | String.t, keyword)
+  @spec post(String.t, post_body, keyword)
    :: {:ok, Response.t} | {:error, term}
   def post(url, body, options \\ [])
 
@@ -48,9 +52,21 @@ defmodule HTTPX do
     body = URI.encode_query(body)
     options =
       options
-      |> Keyword.update(:headers, [], &([@post_header_urlencoded | &1]))
+      |> Keyword.update(:headers, [@post_header_urlencoded], &([@post_header_urlencoded | &1]))
 
     post(url, body, options)
+  end
+
+  def post(url, {:json, body}, options) do
+    with {:ok, body} <- Poison.encode(body) do
+      options =
+        options
+        |> Keyword.update(:headers, [@post_header_json], &([@post_header_json | &1]))
+
+      post(url, body, options)
+    else
+      _error -> {:error, :body_not_valid_json}
+    end
   end
 
   # Default
@@ -175,7 +191,14 @@ defmodule HTTPX do
   def get!(url, options \\ []) do
     case request(:get, url, options) do
       {:ok, response} -> response
-      {:error, reason} -> raise RuntimeError, to_string(reason)
+      {:error, reason} ->
+        context =
+          [
+            url: url,
+            options: options,
+          ]
+
+        raise RequestError.exception(reason, nil, context)
     end
   end
 
@@ -184,11 +207,19 @@ defmodule HTTPX do
 
   For options see: `&post/3`.
   """
-  @spec post!(String.t, String.t, keyword) :: Response.t
+  @spec post!(String.t, post_body, keyword) :: Response.t
   def post!(url, body, options \\ []) do
-    case request(:post, url, Keyword.put(options, :body, body)) do
+    case post(url, body, options) do
       {:ok, response} -> response
-      {:error, reason} -> raise RuntimeError, to_string(reason)
+      {:error, reason} ->
+        context =
+          [
+            url: url,
+            body: body,
+            options: options,
+          ]
+
+        raise RequestError.exception(reason, nil, context)
     end
   end
 end
