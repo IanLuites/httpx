@@ -5,7 +5,7 @@ defmodule Httpx.Mixfile do
     [
       app: :httpx,
       description: "Simple Elixir library with HTTP[S] helpers.",
-      version: "0.0.2",
+      version: "0.0.3",
       elixir: "~> 1.4",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -43,7 +43,7 @@ defmodule Httpx.Mixfile do
 
   defp deps do
     [
-      {:hackney, "1.8.0"}, # Specific version to prevent pool error.
+      {:hackney, "~> 1.9"},
       {:poison, "~> 3.1"},
 
       # Dev / Test
