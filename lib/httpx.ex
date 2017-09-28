@@ -11,7 +11,7 @@ defmodule HTTPX do
   @default_auth [
     basic: HTTPX.Auth.Basic
   ]
-  @auth_methods Application.get_env(:httpx, :auth_extensions, @default_auth)
+  @auth_methods Application.get_env(:httpx, :auth_extensions, []) ++ @default_auth
 
   @default_settings [
     ssl_options: [versions: [:'tlsv1.2']],
@@ -103,8 +103,10 @@ defmodule HTTPX do
       |> Keyword.merge(options[:settings] || [])
       |> Kernel.++([:with_body])
 
+    auth = options[:auth]
+
     headers =
-      case @auth_methods[options[:auth]] do
+      case @auth_methods[auth] || auth do
         nil -> headers
         method ->
           # 💖 Pipes
