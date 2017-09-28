@@ -103,8 +103,10 @@ defmodule HTTPX do
       |> Keyword.merge(options[:settings] || [])
       |> Kernel.++([:with_body])
 
+    auth = options[:auth]
+
     headers =
-      case @auth_methods[options[:auth]] do
+      case @auth_methods[auth] || auth do
         nil -> headers
         method ->
           # 💖 Pipes
