@@ -11,7 +11,7 @@ defmodule HTTPX do
   @default_auth [
     basic: HTTPX.Auth.Basic
   ]
-  @auth_methods Application.get_env(:httpx, :auth_extensions, @default_auth)
+  @auth_methods Application.get_env(:httpx, :auth_extensions, []) ++ @default_auth
 
   @default_settings [
     ssl_options: [versions: [:'tlsv1.2']],
