@@ -1,9 +1,9 @@
 defmodule HTTPX.Auth.Basic do
   @moduledoc false
 
-  @doc false
-  @spec auth(atom, String.t, [{String.t, String.t}], String.t, keyword)
-   :: [{String.t, String.t}]
+  use HTTPX.Auth
+
+  @impl true
   def auth(_method, _url, _headers, _body, options) do
     username = options[:username]
     password = options[:password]
