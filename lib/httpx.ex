@@ -108,10 +108,10 @@ defmodule HTTPX do
     headers =
       case @auth_methods[auth] || auth do
         nil -> headers
-        method ->
+        auth_method ->
           # 💖 Pipes
           method
-          |> method.auth(full_url, headers, body, options)
+          |> auth_method.auth(full_url, headers, body, options)
           |> Kernel.++(headers)
       end
 
