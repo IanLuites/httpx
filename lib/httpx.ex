@@ -118,7 +118,7 @@ defmodule HTTPX do
     method
     |> :hackney.request(full_url, headers, body, hackney_settings)
     |> parse_response(options[:format] || :text)
-    |> handle_response(:fail in options)
+    |> handle_response(options[:fail] || false)
   end
 
   ### Helpers ###

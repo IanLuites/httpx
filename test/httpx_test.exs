@@ -1,6 +1,6 @@
-defmodule HttpxTest do
+defmodule HTTPXTest do
   use ExUnit.Case
-  doctest Httpx
+  doctest HTTPX
 
   test "the truth" do
     assert 1 + 1 == 2
