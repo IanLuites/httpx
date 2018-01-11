@@ -6,7 +6,8 @@ defmodule HTTPX do
   alias HTTPX.RequestError
   alias HTTPX.Response
 
-  @type post_body :: String.t | {:urlencoded, map | keyword} | {:json, map | keyword | String.t}
+  @type post_body ::
+          String.t() | {:urlencoded, map | keyword} | {:json, map | keyword | String.t()}
 
   @default_auth [
     basic: HTTPX.Auth.Basic
@@ -14,10 +15,10 @@ defmodule HTTPX do
   @auth_methods Application.get_env(:httpx, :auth_extensions, []) ++ @default_auth
 
   @default_settings [
-    ssl_options: [versions: [:'tlsv1.2']],
+    ssl_options: [versions: [:"tlsv1.2"]],
     pool: :default,
     connect_timeout: 5_000,
-    recv_timeout: 15_000,
+    recv_timeout: 15_000
   ]
 
   @post_header_urlencoded {"Content-Type", "application/x-www-form-urlencoded"}
@@ -25,10 +26,7 @@ defmodule HTTPX do
 
   @dialyzer {
     [:no_return, :no_match, :nowarn_function],
-    get: 1,
-    get: 2,
-    request: 2,
-    request: 3,
+    get: 1, get: 2, request: 2, request: 3
   }
 
   @doc ~S"""
@@ -36,7 +34,7 @@ defmodule HTTPX do
 
   For options see: `&request/3`.
   """
-  @spec get(String.t, keyword) :: {:ok, Response.t} | {:error, term}
+  @spec get(String.t(), keyword) :: {:ok, Response.t()} | {:error, term}
   def get(url, options \\ []), do: :get |> request(url, options)
 
   @doc ~S"""
@@ -44,24 +42,22 @@ defmodule HTTPX do
 
   For options see: `&request/3`.
   """
-  @spec post(String.t, post_body, keyword)
-   :: {:ok, Response.t} | {:error, term}
+  @spec post(String.t(), post_body, keyword) :: {:ok, Response.t()} | {:error, term}
   def post(url, body, options \\ [])
 
   def post(url, {:urlencoded, body}, options) do
-    body = URI.encode_query(body)
     options =
       options
-      |> Keyword.update(:headers, [@post_header_urlencoded], &([@post_header_urlencoded | &1]))
+      |> Keyword.update(:headers, [@post_header_urlencoded], &[@post_header_urlencoded | &1])
 
-    post(url, body, options)
+    post(url, query_encode(body), options)
   end
 
   def post(url, {:json, body}, options) do
     with {:ok, body} <- Poison.encode(body) do
       options =
         options
-        |> Keyword.update(:headers, [@post_header_json], &([@post_header_json | &1]))
+        |> Keyword.update(:headers, [@post_header_json], &[@post_header_json | &1])
 
       post(url, body, options)
     else
@@ -70,8 +66,7 @@ defmodule HTTPX do
   end
 
   # Default
-  def post(url, body, options),
-    do: :post |> request(url, Keyword.put(options, :body, body))
+  def post(url, body, options), do: :post |> request(url, Keyword.put(options, :body, body))
 
   @doc ~S"""
   Performs a request.
@@ -88,15 +83,13 @@ defmodule HTTPX do
     * `:auth`, set authorization options.
     * `:format`, set to parse. (Like `:json`)
   """
-  @spec request(term, String.t, keyword) :: {:ok, Response.t} | {:error, term}
+  @spec request(term, String.t(), keyword) :: {:ok, Response.t()} | {:error, term}
   def request(method, url, options \\ []) do
     full_url = generate_url(url, options)
 
-    headers =
-      options[:headers] || []
+    headers = options[:headers] || []
 
-    body =
-      options[:body] || ""
+    body = options[:body] || ""
 
     hackney_settings =
       @default_settings
@@ -107,7 +100,9 @@ defmodule HTTPX do
 
     headers =
       case @auth_methods[auth] || auth do
-        nil -> headers
+        nil ->
+          headers
+
         auth_method ->
           # 💖 Pipes
           method
@@ -124,14 +119,21 @@ defmodule HTTPX do
   ### Helpers ###
 
   defp generate_url(url, options) do
+    uri = URI.parse(url)
+
     full_url =
       cond do
         not Keyword.has_key?(options, :params) ->
           url
-        URI.parse(url).query ->
-          url <> "&" <> URI.encode_query(options[:params] || %{})
+
+        uri.query ->
+          url <> "&" <> query_encode(options[:params] || %{})
+
+        uri.path ->
+          url <> "?" <> query_encode(options[:params] || %{})
+
         true ->
-          url <> "?" <> URI.encode_query(options[:params] || %{})
+          url <> "/?" <> query_encode(options[:params] || %{})
       end
 
     full_url
@@ -141,12 +143,11 @@ defmodule HTTPX do
 
   defp parse_response({:ok, status, resp_headers, resp_body}, format) do
     with {:ok, body} <- parse_body(resp_body, format) do
-      response =
-        %Response{
-          status: status,
-          headers: resp_headers,
-          body: body,
-        }
+      response = %Response{
+        status: status,
+        headers: resp_headers,
+        body: body
+      }
 
       {:ok, response}
     else
@@ -165,22 +166,50 @@ defmodule HTTPX do
   defp parse_body(body, format)
 
   defp parse_body(body, :text), do: {:ok, body}
-  defp parse_body(body, :json), do: body |> Poison.decode
+  defp parse_body(body, :json), do: body |> Poison.decode()
   defp parse_body(body, :json_atoms), do: body |> Poison.decode(keys: :atoms)
   defp parse_body(body, :json_atoms!), do: body |> Poison.decode(keys: :atoms!)
 
   defp handle_response({:ok, %{status: status}}, true)
-    when status < 200 or status >= 300, do: {:error, :http_status_failure}
+       when status < 200 or status >= 300,
+       do: {:error, :http_status_failure}
+
   defp handle_response(response, _), do: response
 
   defp default_process_url(url) do
-    case url |> String.slice(0, 12) |> String.downcase do
+    case url |> String.slice(0, 12) |> String.downcase() do
       "http://" <> _ -> url
       "https://" <> _ -> url
       "http+unix://" <> _ -> url
       _ -> "http://" <> url
     end
   end
+
+  ### Query Encoding ###
+
+  def query_encode(data) do
+    data
+    |> query_encode("")
+    |> query_encode_to_binary()
+  end
+
+  defp query_encode(data, prefix) do
+    Enum.flat_map(data, fn {field, value} ->
+      key =
+        if prefix == "",
+          do: URI.encode_www_form(to_string(field)),
+          else: [prefix, ?[, URI.encode_www_form(to_string(field)), ?]]
+
+      if is_map(value) or is_list(value) do
+        query_encode(value, key)
+      else
+        [?&, key, ?=, URI.encode_www_form(to_string(value))]
+      end
+    end)
+  end
+
+  defp query_encode_to_binary([?& | data]), do: IO.iodata_to_binary(data)
+  defp query_encode_to_binary(data), do: IO.iodata_to_binary(data)
 
   ## Bangified ###
 
@@ -189,16 +218,17 @@ defmodule HTTPX do
 
   For options see: `&get/2`.
   """
-  @spec get!(String.t, keyword) :: Response.t
+  @spec get!(String.t(), keyword) :: Response.t()
   def get!(url, options \\ []) do
     case request(:get, url, options) do
-      {:ok, response} -> response
+      {:ok, response} ->
+        response
+
       {:error, reason} ->
-        context =
-          [
-            url: url,
-            options: options,
-          ]
+        context = [
+          url: url,
+          options: options
+        ]
 
         raise RequestError.exception(reason, nil, context)
     end
@@ -209,17 +239,18 @@ defmodule HTTPX do
 
   For options see: `&post/3`.
   """
-  @spec post!(String.t, post_body, keyword) :: Response.t
+  @spec post!(String.t(), post_body, keyword) :: Response.t()
   def post!(url, body, options \\ []) do
     case post(url, body, options) do
-      {:ok, response} -> response
+      {:ok, response} ->
+        response
+
       {:error, reason} ->
-        context =
-          [
-            url: url,
-            body: body,
-            options: options,
-          ]
+        context = [
+          url: url,
+          body: body,
+          options: options
+        ]
 
         raise RequestError.exception(reason, nil, context)
     end
