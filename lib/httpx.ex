@@ -69,6 +69,14 @@ defmodule HTTPX do
   def post(url, body, options), do: :post |> request(url, Keyword.put(options, :body, body))
 
   @doc ~S"""
+  Performs a delete request.
+
+  For options see: `&request/3`.
+  """
+  @spec delete(String.t(), keyword) :: {:ok, Response.t()} | {:error, term}
+  def delete(url, options \\ []), do: :delete |> request(url, options)
+
+  @doc ~S"""
   Performs a request.
 
   The given `method` is used and the `url` is called.
@@ -249,6 +257,27 @@ defmodule HTTPX do
         context = [
           url: url,
           body: body,
+          options: options
+        ]
+
+        raise RequestError.exception(reason, nil, context)
+    end
+  end
+
+  @doc ~S"""
+  Performs a delete request.
+
+  For options see: `&delete/2`.
+  """
+  @spec delete!(String.t(), keyword) :: Response.t()
+  def delete!(url, options \\ []) do
+    case request(:delete, url, options) do
+      {:ok, response} ->
+        response
+
+      {:error, reason} ->
+        context = [
+          url: url,
           options: options
         ]
 
