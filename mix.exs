@@ -5,10 +5,10 @@ defmodule Httpx.Mixfile do
     [
       app: :httpx,
       description: "Simple Elixir library with HTTP[S] helpers.",
-      version: "0.0.8",
+      version: "0.0.9",
       elixir: "~> 1.4",
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
 
@@ -18,8 +18,8 @@ defmodule Httpx.Mixfile do
       homepage_url: "https://github.com/IanLuites/httpx",
       docs: [
         main: "readme",
-        extras: ["README.md"],
-      ],
+        extras: ["README.md"]
+      ]
     ]
   end
 
@@ -29,11 +29,16 @@ defmodule Httpx.Mixfile do
       maintainers: ["Ian Luites"],
       licenses: ["MIT"],
       files: [
-        "lib/httpx", "lib/httpx.ex", "mix.exs", "README*", "LICENSE*", # Elixir
+        # Elixir
+        "lib/httpx",
+        "lib/httpx.ex",
+        "mix.exs",
+        "README*",
+        "LICENSE*"
       ],
       links: %{
-        "GitHub" => "https://github.com/IanLuites/httpx",
-      },
+        "GitHub" => "https://github.com/IanLuites/httpx"
+      }
     ]
   end
 
@@ -47,7 +52,7 @@ defmodule Httpx.Mixfile do
       {:poison, "~> 3.1"},
 
       # Dev / Test
-      {:analyze, ">= 0.0.6", only: [:dev, :test], runtime: false},
+      {:analyze, ">= 0.0.6", only: [:dev, :test], runtime: false}
     ]
   end
 end

@@ -21,6 +21,9 @@ defmodule HTTPX do
     recv_timeout: 15_000
   ]
 
+  @doc false
+  def __default_settings__, do: @default_settings
+
   @post_header_urlencoded {"Content-Type", "application/x-www-form-urlencoded"}
   @post_header_json {"Content-Type", "application/json"}
 
