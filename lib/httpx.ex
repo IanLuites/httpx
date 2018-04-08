@@ -46,30 +46,35 @@ defmodule HTTPX do
   For options see: `&request/3`.
   """
   @spec post(String.t(), post_body, keyword) :: {:ok, Response.t()} | {:error, term}
-  def post(url, body, options \\ [])
-
-  def post(url, {:urlencoded, body}, options) do
-    options =
-      options
-      |> Keyword.update(:headers, [@post_header_urlencoded], &[@post_header_urlencoded | &1])
-
-    post(url, query_encode(body), options)
-  end
-
-  def post(url, {:json, body}, options) do
-    with {:ok, body} <- Poison.encode(body) do
-      options =
-        options
-        |> Keyword.update(:headers, [@post_header_json], &[@post_header_json | &1])
-
-      post(url, body, options)
-    else
-      _error -> {:error, :body_not_valid_json}
+  def post(url, body, options \\ []) do
+    with {:ok, opts} <- body_encoding(body, options) do
+      request(:post, url, opts)
     end
   end
 
-  # Default
-  def post(url, body, options), do: :post |> request(url, Keyword.put(options, :body, body))
+  @doc ~S"""
+  Performs a patch request, passing the body in the options.
+
+  For options see: `&request/3`.
+  """
+  @spec patch(String.t(), post_body, keyword) :: {:ok, Response.t()} | {:error, term}
+  def patch(url, body, options \\ []) do
+    with {:ok, opts} <- body_encoding(body, options) do
+      request(:patch, url, opts)
+    end
+  end
+
+  @doc ~S"""
+  Performs a put request, passing the body in the options.
+
+  For options see: `&request/3`.
+  """
+  @spec put(String.t(), post_body, keyword) :: {:ok, Response.t()} | {:error, term}
+  def put(url, body, options \\ []) do
+    with {:ok, opts} <- body_encoding(body, options) do
+      request(:put, url, opts)
+    end
+  end
 
   @doc ~S"""
   Performs a delete request.
@@ -99,6 +104,11 @@ defmodule HTTPX do
     full_url = generate_url(url, options)
 
     headers = options[:headers] || []
+
+    headers =
+      if List.keymember?(headers, "user-agents", 0),
+        do: headers,
+        else: [{"user-agent", "HTTPX/0.0.11"} | headers]
 
     body = options[:body] || ""
 
@@ -177,9 +187,18 @@ defmodule HTTPX do
   defp parse_body(body, format)
 
   defp parse_body(body, :text), do: {:ok, body}
-  defp parse_body(body, :json), do: body |> Poison.decode()
-  defp parse_body(body, :json_atoms), do: body |> Poison.decode(keys: :atoms)
-  defp parse_body(body, :json_atoms!), do: body |> Poison.decode(keys: :atoms!)
+  defp parse_body(body, :json), do: body |> Jason.decode() |> error_tuple_normalize()
+
+  defp parse_body(body, :json_atoms),
+    do: body |> Jason.decode(keys: :atoms) |> error_tuple_normalize()
+
+  defp parse_body(body, :json_atoms!),
+    do: body |> Jason.decode(keys: :atoms!) |> error_tuple_normalize()
+
+  defp error_tuple_normalize(error = {:error, _}), do: error
+  defp error_tuple_normalize({:error, _, _}), do: {:error, :invalid_json}
+  defp error_tuple_normalize(ok = {:ok, _}), do: ok
+  defp error_tuple_normalize(_), do: {:error, :invalid_json_generic}
 
   defp handle_response({:ok, %{status: status}}, true)
        when status < 200 or status >= 300,
@@ -222,6 +241,26 @@ defmodule HTTPX do
   defp query_encode_to_binary([?& | data]), do: IO.iodata_to_binary(data)
   defp query_encode_to_binary(data), do: IO.iodata_to_binary(data)
 
+  defp body_encoding({:urlencoded, body}, options) do
+    {:ok,
+     options
+     |> Keyword.update(:headers, [@post_header_urlencoded], &[@post_header_urlencoded | &1])
+     |> Keyword.put(:body, query_encode(body))}
+  end
+
+  defp body_encoding({:json, body}, options) do
+    with {:ok, body} <- Jason.encode(body) do
+      {:ok,
+       options
+       |> Keyword.update(:headers, [@post_header_json], &[@post_header_json | &1])
+       |> Keyword.put(:body, body)}
+    else
+      _error -> {:error, :body_not_valid_json}
+    end
+  end
+
+  defp body_encoding(body, options), do: {:ok, Keyword.put(options, :body, body)}
+
   ## Bangified ###
 
   @doc ~S"""
@@ -253,6 +292,50 @@ defmodule HTTPX do
   @spec post!(String.t(), post_body, keyword) :: Response.t()
   def post!(url, body, options \\ []) do
     case post(url, body, options) do
+      {:ok, response} ->
+        response
+
+      {:error, reason} ->
+        context = [
+          url: url,
+          body: body,
+          options: options
+        ]
+
+        raise RequestError.exception(reason, nil, context)
+    end
+  end
+
+  @doc ~S"""
+  Performs a patch request, passing the body in the options.
+
+  For options see: `&patch/3`.
+  """
+  @spec patch!(String.t(), post_body, keyword) :: Response.t()
+  def patch!(url, body, options \\ []) do
+    case patch(url, body, options) do
+      {:ok, response} ->
+        response
+
+      {:error, reason} ->
+        context = [
+          url: url,
+          body: body,
+          options: options
+        ]
+
+        raise RequestError.exception(reason, nil, context)
+    end
+  end
+
+  @doc ~S"""
+  Performs a post request, passing the body in the options.
+
+  For options see: `&put/3`.
+  """
+  @spec put!(String.t(), post_body, keyword) :: Response.t()
+  def put!(url, body, options \\ []) do
+    case put(url, body, options) do
       {:ok, response} ->
         response
 

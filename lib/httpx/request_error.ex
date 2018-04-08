@@ -33,7 +33,7 @@ defmodule HTTPX.RequestError do
       to_string(exception.code),
       "\r\n  url: ",
       exception.url,
-      if exception.options[:params] != [] do
+      if exception.options[:params] do
         "\r\n  params:\r\n    " <> print_data(exception.options[:params])
       else
         nil
