@@ -26,6 +26,7 @@ defmodule HTTPX do
 
   @post_header_urlencoded {"Content-Type", "application/x-www-form-urlencoded"}
   @post_header_json {"Content-Type", "application/json"}
+  @post_header_file {"Content-Type", "application/octet-stream"}
 
   @dialyzer {
     [:no_return, :no_match, :nowarn_function],
@@ -98,6 +99,7 @@ defmodule HTTPX do
     * `:fail`, will error out any request with a non 2xx response code, when set to true.
     * `:auth`, set authorization options.
     * `:format`, set to parse. (Like `:json`)
+    * `:retry`, set to retry the request. See the retry options.
   """
   @spec request(term, String.t(), keyword) :: {:ok, Response.t()} | {:error, term}
   def request(method, url, options \\ []) do
@@ -106,9 +108,9 @@ defmodule HTTPX do
     headers = options[:headers] || []
 
     headers =
-      if List.keymember?(headers, "user-agents", 0),
+      if List.keymember?(headers, "user-agent", 0),
         do: headers,
-        else: [{"user-agent", "HTTPX/0.0.11"} | headers]
+        else: [{"user-agent", "HTTPX/0.0.12"} | headers]
 
     body = options[:body] || ""
 
@@ -135,6 +137,27 @@ defmodule HTTPX do
     |> :hackney.request(full_url, headers, body, hackney_settings)
     |> parse_response(options[:format] || :text)
     |> handle_response(options[:fail] || false)
+  end
+
+  @doc ~S"""
+  Performs a request on all IPs associated with the host DNS.
+
+  For more information see: `request/3`.
+  """
+  @spec multi_request(term, String.t(), keyword) :: %{ok: map, error: map}
+  def multi_request(method, url, opts \\ []) do
+    uri = %{host: host} = URI.parse(url)
+    opts = Keyword.update(opts, :headers, [{"Host", host}], &[{"Host", host} | &1])
+
+    host
+    |> String.to_charlist()
+    |> :inet_res.lookup(:in, :a)
+    |> Enum.map(&(&1 |> Tuple.to_list() |> Enum.join(".")))
+    |> Enum.map(&{&1, request(method, to_string(%{uri | host: &1}), opts)})
+    |> Enum.group_by(&elem(elem(&1, 1), 0))
+    |> Enum.into(%{})
+    |> Map.update(:ok, [], &Enum.into(&1, %{}, fn {ip, r} -> {ip, elem(r, 1)} end))
+    |> Map.update(:error, [], &Enum.into(&1, %{}))
   end
 
   ### Helpers ###
@@ -246,6 +269,13 @@ defmodule HTTPX do
      options
      |> Keyword.update(:headers, [@post_header_urlencoded], &[@post_header_urlencoded | &1])
      |> Keyword.put(:body, query_encode(body))}
+  end
+
+  defp body_encoding({:file, body}, options) do
+    {:ok,
+     options
+     |> Keyword.update(:headers, [@post_header_file], &[@post_header_file | &1])
+     |> Keyword.put(:body, body)}
   end
 
   defp body_encoding({:json, body}, options) do
