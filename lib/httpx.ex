@@ -5,6 +5,7 @@ defmodule HTTPX do
 
   alias HTTPX.RequestError
   alias HTTPX.Response
+  use HTTPX.Log
 
   @type post_body ::
           String.t() | {:urlencoded, map | keyword} | {:json, map | keyword | String.t()}
@@ -110,32 +111,32 @@ defmodule HTTPX do
     headers =
       if List.keymember?(headers, "user-agent", 0),
         do: headers,
-        else: [{"user-agent", "HTTPX/0.0.12"} | headers]
+        else: [{"user-agent", "HTTPX/0.0.13"} | headers]
 
     body = options[:body] || ""
 
+    hackney_settings = Keyword.merge(@default_settings, options[:settings] || [])
+
     hackney_settings =
-      @default_settings
-      |> Keyword.merge(options[:settings] || [])
-      |> Kernel.++([:with_body])
+      if options[:format] == :stream, do: hackney_settings, else: [:with_body | hackney_settings]
 
     auth = options[:auth]
 
     headers =
-      case @auth_methods[auth] || auth do
-        nil ->
-          headers
-
-        auth_method ->
-          # 💖 Pipes
-          method
-          |> auth_method.auth(full_url, headers, body, options)
-          |> Kernel.++(headers)
+      if auth_method = @auth_methods[auth] || auth do
+        auth_method.auth(method, full_url, headers, body, options) ++ headers
+      else
+        headers
       end
 
-    method
-    |> :hackney.request(full_url, headers, body, hackney_settings)
-    |> parse_response(options[:format] || :text)
+    Log.log(method, full_url, headers, body)
+
+    response = :hackney.request(method, full_url, headers, body, hackney_settings)
+
+    Log.log(method, full_url, headers, body, response)
+
+    response
+    |> parse_response(options[:format] || :text, options)
     |> handle_response(options[:fail] || false)
   end
 
@@ -185,8 +186,8 @@ defmodule HTTPX do
     |> default_process_url
   end
 
-  defp parse_response({:ok, status, resp_headers, resp_body}, format) do
-    with {:ok, body} <- parse_body(resp_body, format) do
+  defp parse_response({:ok, status, resp_headers, resp_body}, format, opts) do
+    with {:ok, body} <- parse_body(resp_body, format, opts) do
       response = %Response{
         status: status,
         headers: resp_headers,
@@ -199,7 +200,7 @@ defmodule HTTPX do
     end
   end
 
-  defp parse_response({:ok, status, resp_headers}, format) do
+  defp parse_response({:ok, status, resp_headers}, format, _opts) do
     parse_response({:ok, status, resp_headers, ""}, format)
   end
 
@@ -207,16 +208,86 @@ defmodule HTTPX do
     error
   end
 
-  defp parse_body(body, format)
+  defp parse_body(body, format, opts)
 
-  defp parse_body(body, :text), do: {:ok, body}
-  defp parse_body(body, :json), do: body |> Jason.decode() |> error_tuple_normalize()
+  defp parse_body(body, :text, _opts), do: {:ok, body}
+  defp parse_body(body, :json, _opts), do: body |> Jason.decode() |> error_tuple_normalize()
 
-  defp parse_body(body, :json_atoms),
+  defp parse_body(body, :json_atoms, _opts),
     do: body |> Jason.decode(keys: :atoms) |> error_tuple_normalize()
 
-  defp parse_body(body, :json_atoms!),
+  defp parse_body(body, :json_atoms!, _opts),
     do: body |> Jason.decode(keys: :atoms!) |> error_tuple_normalize()
+
+  defp parse_body(body, :stream, opts) do
+    stream_opts = opts[:stream] || []
+
+    with {:ok, streamer} <- create_stream_splitter(stream_opts[:format] || :chunked, stream_opts) do
+      {:ok, Stream.resource(fn -> {body, <<>>} end, streamer, fn _ref -> :ok end)}
+    end
+  end
+
+  defp create_stream_splitter(:chunks, _opts) do
+    {:ok,
+     fn {ref, _buffer} ->
+       case :hackney.stream_body(ref) do
+         {:ok, chunk} -> {[chunk], {ref, nil}}
+         :done -> {:halt, ref}
+         {:error, reason} -> raise "Error reading HTTP stream. (#{inspect(reason)})"
+       end
+     end}
+  end
+
+  defp create_stream_splitter(:newline, opts) do
+    create_stream_splitter(:separated, Keyword.merge(opts, separator: ~r/\r?\n/, ends_with: "\n"))
+  end
+
+  defp create_stream_splitter(:separated, opts) do
+    if separator = opts[:separator] do
+      ends_with? =
+        cond do
+          e = opts[:ends_with] ->
+            &String.ends_with?(&1, e)
+
+          is_binary(separator) ->
+            &String.ends_with?(&1, separator)
+
+          Regex.regex?(separator) ->
+            source = Regex.source(separator)
+
+            if Regex.escape(source) == source do
+              &String.ends_with?(&1, source)
+            else
+              &Regex.match?(Regex.compile!(source <> "$"), &1)
+            end
+        end
+
+      {:ok,
+       fn {ref, buffer} ->
+         case :hackney.stream_body(ref) do
+           {:ok, chunk} ->
+             items = String.split(buffer <> chunk, separator, trim: true)
+
+             if ends_with?.(chunk) do
+               {items, {ref, <<>>}}
+             else
+               {buffer, items} = List.pop_at(items, -1)
+               {items, {ref, buffer}}
+             end
+
+           :done ->
+             {:halt, ref}
+
+           {:error, reason} ->
+             raise "Error reading HTTP stream. (#{inspect(reason)})"
+         end
+       end}
+    else
+      {:error, :stream_missing_separator}
+    end
+  end
+
+  defp create_stream_splitter(_, _), do: {:error, :invalid_stream_format}
 
   defp error_tuple_normalize(error = {:error, _}), do: error
   defp error_tuple_normalize({:error, _, _}), do: {:error, :invalid_json}
