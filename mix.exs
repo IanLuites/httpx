@@ -48,11 +48,11 @@ defmodule Httpx.Mixfile do
 
   defp deps do
     [
-      {:hackney, "~> 1.12"},
+      {:hackney, "~> 1.15"},
       {:jason, "~> 1.0"},
 
       # Dev / Test
-      {:analyze, ">= 0.0.10", only: [:dev, :test], runtime: false}
+      {:analyze, ">= 0.0.13", only: [:dev, :test], runtime: false}
     ]
   end
 end
