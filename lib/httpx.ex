@@ -200,13 +200,11 @@ defmodule HTTPX do
     end
   end
 
-  defp parse_response({:ok, status, resp_headers}, format, _opts) do
-    parse_response({:ok, status, resp_headers, ""}, format)
+  defp parse_response({:ok, status, resp_headers}, format, opts) do
+    parse_response({:ok, status, resp_headers, ""}, format, opts)
   end
 
-  defp parse_response(error, _format) do
-    error
-  end
+  defp parse_response(error, _format, _opts), do: error
 
   defp parse_body(body, format, opts)
 
