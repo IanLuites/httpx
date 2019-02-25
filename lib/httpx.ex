@@ -358,7 +358,37 @@ defmodule HTTPX do
     end
   end
 
+  defp body_encoding({:multipart, data}, options) do
+    body =
+      Enum.map(
+        data,
+        fn
+          {name, {:file, file}} -> {:file, file, name, []}
+          {name, {:file, file, headers}} -> {:file, file, name, headers}
+          {name, {:binfile, data}} -> encode_mp_binfile(name, data)
+          {name, {:binfile, data, opts}} -> encode_mp_binfile(name, data, opts)
+          {name, value} -> {name, value}
+        end
+      )
+
+    {:ok, Keyword.put(options, :body, {:multipart, body})}
+  end
+
   defp body_encoding(body, options), do: {:ok, Keyword.put(options, :body, body)}
+
+  defp encode_mp_binfile(name, data, opts \\ []) do
+    filename = opts[:filename] || name
+
+    mime =
+      cond do
+        m = opts[:mime] -> m
+        String.printable?(data) -> "text/plain"
+        :fallback -> "application/octet-stream"
+      end
+
+    {name, data, {"form-data", [{"name", "\"#{name}\""}, {"filename", "\"#{filename}\""}]},
+     [{"content-type", mime}]}
+  end
 
   ## Bangified ###
 
