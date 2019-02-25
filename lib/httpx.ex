@@ -111,7 +111,7 @@ defmodule HTTPX do
     headers =
       if List.keymember?(headers, "user-agent", 0),
         do: headers,
-        else: [{"user-agent", "HTTPX/0.0.13"} | headers]
+        else: [{"user-agent", "HTTPX/0.0.16"} | headers]
 
     body = options[:body] || ""
 
