@@ -76,7 +76,7 @@ defmodule HTTPX.Log do
                    case unquote(response) do
                      {:ok, status, _} -> "(#{status})"
                      {:ok, status, _, _} -> "(#{status})"
-                     {:error, reason} -> "(failed: #{reason})"
+                     {:error, reason} -> "(failed: #{inspect(reason)})"
                    end
 
                  unquote(opts[:prefix]) <>
