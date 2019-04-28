@@ -2,6 +2,28 @@ defmodule HTTPX.Processor do
   @moduledoc ~S"""
   HTTPX processor module.
 
+  Processors allow users to change or update requests,
+  during a request lifetime.
+
+  Processors are applied to all requests by `HTTPX` and
+  are an ideal way to insert tracking or metrics.
+
+  ## Configure
+
+  The processors can be given as a list, which will be applied in order.
+
+  ```
+  config :httpx, processors: [Example.Processor]
+  ```
+
+  Processors will be optimized on startup and can't be dynamically added or removed.
+
+  If such functionality is required, then the following flag needs to be set:
+
+  ```
+  config :httpx, dynamic: true
+  ```
+
   ## Processor Lifetime
 
   The lifetime of a processor is:
@@ -86,6 +108,7 @@ defmodule HTTPX.Processor do
 
     def post_parse(_, _), do: :ok
   end
+  ```
   """
   @doc ~S"Initialize processor."
   @callback init(opts :: term) :: {:ok, opts :: term}
