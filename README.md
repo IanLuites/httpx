@@ -52,6 +52,28 @@ be found at [https://hexdocs.pm/httpx](https://hexdocs.pm/httpx).
 
 ## Streaming
 
+## Changelog
+
+### 0.1.0 (2019-04-x)
+
+New features:
+
+* `HTTPX.Request` module to store request information and allow for request replays.
+* `HTTPX.Auth` can now modify more than headers.
+
+Changes:
+
+* `HTTPX.Auth` now applies to a `HTTPX.Request` and not a tuple.
+* `HTTPX.Auth` now returns a [modified] `HTTPX.Request` and not a list of headers.
+
+Optimizations:
+
+* ...
+
+Bug fixes:
+
+* ...
+
 ## License
 
 _HTTPX_ source code is released under [the MIT License](LICENSE).
