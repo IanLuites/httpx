@@ -17,6 +17,8 @@ defmodule HTTPX.Request do
     recv_timeout: 15_000
   ]
 
+  @ssl_verify Application.get_env(:httpx, :ssl_verify, true)
+
   @user_agent "HTTPX/#{Mix.Project.config()[:version]}"
 
   @doc false
@@ -82,10 +84,36 @@ defmodule HTTPX.Request do
   end
 
   @spec settings(Keyword.t()) :: list
-  defp settings(options) do
-    hackney_settings = Keyword.merge(@default_settings, options[:settings] || [])
 
-    if options[:format] == :stream, do: hackney_settings, else: [:with_body | hackney_settings]
+  if @ssl_verify do
+    defp settings(options) do
+      settings = Keyword.merge(@default_settings, options[:settings] || [])
+
+      settings =
+        if ssl = settings[:ssl_options] do
+          ssl =
+            Keyword.merge(
+              [
+                versions: [:"tlsv1.2"],
+                verify: :verify_peer,
+                cacertfile: :certifi.cacertfile(),
+                depth: 2
+              ],
+              ssl
+            )
+
+          Keyword.put(settings, :ssl_options, ssl)
+        else
+          settings
+        end
+
+      if options[:format] == :stream, do: settings, else: [:with_body | settings]
+    end
+  else
+    defp settings(options) do
+      settings = Keyword.merge(@default_settings, options[:settings] || [])
+      if options[:format] == :stream, do: settings, else: [:with_body | settings]
+    end
   end
 
   @spec generate_url(String.t(), Keyword.t()) :: String.t()
