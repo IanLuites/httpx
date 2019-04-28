@@ -46,6 +46,24 @@ end
 The docs can
 be found at [https://hexdocs.pm/httpx](https://hexdocs.pm/httpx).
 
+## Settings
+
+### SSL / TLS
+
+SSL options can be passed as `:ssl_options`.
+
+Certificate validation is always performed with the CA bundle adapted from Mozilla by https://certifi.io  in the [certifi](https://hex.pm/packages/certifi) package.
+
+By default certificates are verified to a a depth of level 2, which means the path can be PEER, CA, CA, ROOT-CA, and so on.
+
+To disable verification pass `verify: :verify_none`.
+
+For more options see
+[Erlang SSL Options (COMMON)](http://erlang.org/doc/man/ssl.html#TLS/DTLS%20OPTION%20DESCRIPTIONS%20-%20COMMON%20for%20SERVER%20and%20CLIENT)
+and
+[Erlang SSL Options (CLIENT)](http://erlang.org/doc/man/ssl.html#TLS/DTLS%20OPTION%20DESCRIPTIONS%20-%20CLIENT)
+documentation.
+
 ## Logging
 
 ## Processors
@@ -65,6 +83,7 @@ Changes:
 
 * `HTTPX.Auth` now applies to a `HTTPX.Request` and not a tuple.
 * `HTTPX.Auth` now returns a [modified] `HTTPX.Request` and not a list of headers.
+* SSL certificates are now verified by default. Use `config :httpx, ssl_verify: false` to disable verification.
 
 Optimizations:
 
