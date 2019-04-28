@@ -1,5 +1,9 @@
 defmodule HTTPX.SSLVerificationTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: false
+
+  setup do
+    :hackney_pool.stop_pool(:default)
+  end
 
   test "by default uses SSL verification" do
     assert HTTPX.get("https://self-signed.badssl.com/") ==
