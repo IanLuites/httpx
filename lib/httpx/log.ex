@@ -1,4 +1,6 @@
 defmodule HTTPX.Log do
+  @moduledoc ~S"Simple logger for HTTPX requests."
+
   defmacro __using__(_opts \\ []) do
     quote do
       alias HTTPX.Log
