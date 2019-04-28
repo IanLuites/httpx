@@ -114,7 +114,7 @@ defmodule HTTPX.Processor do
   @callback init(opts :: term) :: {:ok, opts :: term}
 
   @doc ~S"Pre request processor."
-  @callback pre_request(HTTPX.Request.t(), opts :: term) :: :ok
+  @callback pre_request(HTTPX.Request.t(), opts :: term) :: :ok | {:ok, HTTPX.Request.t()}
 
   @doc ~S"Post request processor."
   @callback post_request(any, opts :: term) :: :ok
@@ -152,6 +152,14 @@ defmodule HTTPX.Processor do
 
       defoverridable unquote(@overridable)
       @on_definition {unquote(__MODULE__), :track_impl}
+
+      # Reset specs, because something weird happens
+      # with defoverridable
+      @spec __processor__ :: [atom]
+      @spec init(opts :: term) :: {:ok, opts :: term}
+      @spec pre_request(HTTPX.Request.t(), opts :: term) :: :ok | {:ok, HTTPX.Request.t()}
+      @spec post_request(any, opts :: term) :: :ok
+      @spec post_parse(any, opts :: term) :: :ok
     end
   end
 
