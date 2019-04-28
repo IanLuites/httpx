@@ -186,6 +186,7 @@ New features:
 
 * `HTTPX.Request` module to store request information and allow for request replays.
 * `HTTPX.Auth` can now modify more than headers.
+* Processors that allow for modifications to requests on a project/application level.
 
 Changes:
 
@@ -195,7 +196,7 @@ Changes:
 
 Optimizations:
 
-* ...
+* On load HTTPX optimizes the configured processors.
 
 Bug fixes:
 
