@@ -8,8 +8,7 @@ defmodule HTTPX.Auth do
   @doc ~S"""
   Authorizes a HTTP request using the given method, headers, body, and options.
   """
-  @callback auth(atom, String.t, [{String.t, String.t}], String.t, keyword)
-             :: [{String.t, String.t}]
+  @callback auth(HTTPX.Request.t(), Keyword.t()) :: HTTPX.Request.t()
 
   @doc false
   defmacro __using__(_opts) do
