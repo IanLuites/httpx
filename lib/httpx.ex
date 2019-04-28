@@ -450,4 +450,11 @@ defmodule HTTPX do
         raise RequestError.exception(reason, nil, context)
     end
   end
+
+  ## Optimize Process On Load ##
+
+  @on_load :optimize
+
+  @spec optimize :: :ok
+  def optimize, do: HTTPX.Process.optimize()
 end
