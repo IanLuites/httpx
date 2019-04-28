@@ -1,4 +1,5 @@
 defmodule HTTPX.RequestError do
+  alias HTTPX.Request
   @predefined_messages []
 
   defexception [
@@ -53,7 +54,7 @@ defmodule HTTPX.RequestError do
       end,
       if exception.options[:settings] do
         hackney_settings =
-          HTTPX.__default_settings__()
+          Request.__default_settings__()
           |> Keyword.merge(exception.options[:settings])
 
         "\r\n  hackney:\r\n    " <> print_data(hackney_settings)
