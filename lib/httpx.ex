@@ -5,25 +5,11 @@ defmodule HTTPX do
 
   alias HTTPX.RequestError
   alias HTTPX.Response
+  alias HTTPX.Request
   use HTTPX.Log
 
   @type post_body ::
           String.t() | {:urlencoded, map | keyword} | {:json, map | keyword | String.t()}
-
-  @default_auth [
-    basic: HTTPX.Auth.Basic
-  ]
-  @auth_methods Application.get_env(:httpx, :auth_extensions, []) ++ @default_auth
-
-  @default_settings [
-    ssl_options: [versions: [:"tlsv1.2"]],
-    pool: :default,
-    connect_timeout: 5_000,
-    recv_timeout: 15_000
-  ]
-
-  @doc false
-  def __default_settings__, do: @default_settings
 
   @post_header_urlencoded {"Content-Type", "application/x-www-form-urlencoded"}
   @post_header_json {"Content-Type", "application/json"}
@@ -104,40 +90,36 @@ defmodule HTTPX do
   """
   @spec request(term, String.t(), keyword) :: {:ok, Response.t()} | {:error, term}
   def request(method, url, options \\ []) do
-    full_url = generate_url(url, options)
+    method
+    |> Request.prepare(url, options)
+    |> perform()
+  end
 
-    headers = options[:headers] || []
+  @doc ~S"""
+  Perform a given request.
+  """
+  def perform(request) do
+    %{
+      method: m,
+      url: u,
+      body: b,
+      headers: h,
+      settings: s,
+      format: format,
+      fail: fail
+    } = __MODULE__.Process.pre_request(request)
 
-    headers =
-      if List.keymember?(headers, "user-agent", 0),
-        do: headers,
-        else: [{"user-agent", "HTTPX/0.0.16"} | headers]
+    Log.log(m, u, h, b)
+    response = :hackney.request(m, u, h, b, s)
+    Log.log(m, u, h, b, response)
 
-    body = options[:body] || ""
-
-    hackney_settings = Keyword.merge(@default_settings, options[:settings] || [])
-
-    hackney_settings =
-      if options[:format] == :stream, do: hackney_settings, else: [:with_body | hackney_settings]
-
-    auth = options[:auth]
-
-    headers =
-      if auth_method = @auth_methods[auth] || auth do
-        auth_method.auth(method, full_url, headers, body, options) ++ headers
-      else
-        headers
-      end
-
-    Log.log(method, full_url, headers, body)
-
-    response = :hackney.request(method, full_url, headers, body, hackney_settings)
-
-    Log.log(method, full_url, headers, body, response)
-
-    response
-    |> parse_response(options[:format] || :text, options)
-    |> handle_response(options[:fail] || false)
+    case response
+         |> __MODULE__.Process.post_request()
+         |> parse_response(format, s)
+         |> handle_response(fail) do
+      {:ok, response} -> __MODULE__.Process.post_parse(response)
+      error -> error
+    end
   end
 
   @doc ~S"""
@@ -162,29 +144,6 @@ defmodule HTTPX do
   end
 
   ### Helpers ###
-
-  defp generate_url(url, options) do
-    uri = URI.parse(url)
-
-    full_url =
-      cond do
-        not Keyword.has_key?(options, :params) ->
-          url
-
-        uri.query ->
-          url <> "&" <> query_encode(options[:params] || %{})
-
-        uri.path ->
-          url <> "?" <> query_encode(options[:params] || %{})
-
-        true ->
-          url <> "/?" <> query_encode(options[:params] || %{})
-      end
-
-    full_url
-    |> to_string
-    |> default_process_url
-  end
 
   defp parse_response({:ok, status, resp_headers, resp_body}, format, opts) do
     with {:ok, body} <- parse_body(resp_body, format, opts) do
@@ -298,17 +257,9 @@ defmodule HTTPX do
 
   defp handle_response(response, _), do: response
 
-  defp default_process_url(url) do
-    case url |> String.slice(0, 12) |> String.downcase() do
-      "http://" <> _ -> url
-      "https://" <> _ -> url
-      "http+unix://" <> _ -> url
-      _ -> "http://" <> url
-    end
-  end
-
   ### Query Encoding ###
 
+  @spec query_encode(map) :: binary
   def query_encode(data) do
     data
     |> query_encode("")
