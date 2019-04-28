@@ -2,11 +2,8 @@ defmodule HTTPX do
   @moduledoc ~S"""
   Simple HTTP(s) client with integrated auth methods.
   """
-
-  alias HTTPX.RequestError
-  alias HTTPX.Response
-  alias HTTPX.Request
   use HTTPX.Log
+  alias HTTPX.{Request, RequestError, Response}
 
   @type post_body ::
           String.t() | {:urlencoded, map | keyword} | {:json, map | keyword | String.t()}
@@ -98,6 +95,7 @@ defmodule HTTPX do
   @doc ~S"""
   Perform a given request.
   """
+  @spec perform(HTTPX.Request.t()) :: {:ok, HTTPX.Response.t()} | {:error, term}
   def perform(request) do
     %{
       method: m,
@@ -199,6 +197,7 @@ defmodule HTTPX do
     create_stream_splitter(:separated, Keyword.merge(opts, separator: ~r/\r?\n/, ends_with: "\n"))
   end
 
+  # credo:disable-for-next-line
   defp create_stream_splitter(:separated, opts) do
     if separator = opts[:separator] do
       ends_with? =
@@ -259,6 +258,9 @@ defmodule HTTPX do
 
   ### Query Encoding ###
 
+  @doc ~S"""
+  Encode a map as query.
+  """
   @spec query_encode(map) :: binary
   def query_encode(data) do
     data
@@ -348,7 +350,7 @@ defmodule HTTPX do
 
   For options see: `&get/2`.
   """
-  @spec get!(String.t(), keyword) :: Response.t()
+  @spec get!(String.t(), keyword) :: Response.t() | no_return
   def get!(url, options \\ []) do
     case request(:get, url, options) do
       {:ok, response} ->
@@ -369,7 +371,7 @@ defmodule HTTPX do
 
   For options see: `&post/3`.
   """
-  @spec post!(String.t(), post_body, keyword) :: Response.t()
+  @spec post!(String.t(), post_body, keyword) :: Response.t() | no_return
   def post!(url, body, options \\ []) do
     case post(url, body, options) do
       {:ok, response} ->
@@ -391,7 +393,7 @@ defmodule HTTPX do
 
   For options see: `&patch/3`.
   """
-  @spec patch!(String.t(), post_body, keyword) :: Response.t()
+  @spec patch!(String.t(), post_body, keyword) :: Response.t() | no_return
   def patch!(url, body, options \\ []) do
     case patch(url, body, options) do
       {:ok, response} ->
@@ -413,7 +415,7 @@ defmodule HTTPX do
 
   For options see: `&put/3`.
   """
-  @spec put!(String.t(), post_body, keyword) :: Response.t()
+  @spec put!(String.t(), post_body, keyword) :: Response.t() | no_return
   def put!(url, body, options \\ []) do
     case put(url, body, options) do
       {:ok, response} ->
@@ -435,7 +437,7 @@ defmodule HTTPX do
 
   For options see: `&delete/2`.
   """
-  @spec delete!(String.t(), keyword) :: Response.t()
+  @spec delete!(String.t(), keyword) :: Response.t() | no_return
   def delete!(url, options \\ []) do
     case request(:delete, url, options) do
       {:ok, response} ->
@@ -455,6 +457,14 @@ defmodule HTTPX do
 
   @on_load :optimize
 
+  @doc ~S"""
+  Optimize HTTPX processors.
+
+  This is automatically called on HTTPX load.
+  So there is no need to call it manually.
+
+  The function is idempotent, so there is no harm in calling it.
+  """
   @spec optimize :: :ok
   def optimize, do: HTTPX.Process.optimize()
 end
