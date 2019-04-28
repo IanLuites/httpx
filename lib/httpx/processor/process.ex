@@ -8,11 +8,12 @@ defmodule HTTPX.Process.Helpers do
     case k.init(v) do
       {:ok, new} -> {k, new}
       {:error, reason} -> raise "Failed to init #{k}: #{reason}"
+      opts -> {k, opts}
     end
   end
 
   @doc false
-  @spec do_pre_request([{module, term}], tuple) :: tuple
+  @spec do_pre_request([{module, term}], HTTPX.Request.t()) :: HTTPX.Request.t()
   def do_pre_request([], req), do: req
 
   def do_pre_request([{p, opts} | rest], req) do
@@ -62,7 +63,7 @@ defmodule HTTPX.Process do
 
   # PRE REQUEST
   @doc ~S"Apply all pre request processors."
-  @spec pre_request(HTTPX.Request.t()) :: {:ok, HTTPX.Request.t()} | {:error, term}
+  @spec pre_request(HTTPX.Request.t()) :: HTTPX.Request.t() | {:error, term}
   def pre_request(req),
     do:
       @processors
@@ -106,6 +107,13 @@ defmodule HTTPX.Process do
       :ok
     else
       Logger.debug(fn -> "HTTPX: Optimize process (true)" end)
+
+      # Pre load all processors
+      :httpx
+      |> Application.get_env(:processors, [])
+      |> Enum.map(&if(is_tuple(&1), do: &1, else: {&1, []}))
+      |> Enum.each(&Code.ensure_loaded(elem(&1, 0)))
+
       Code.compiler_options(ignore_module_conflict: true)
 
       Code.compile_quoted(
