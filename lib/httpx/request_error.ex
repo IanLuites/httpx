@@ -1,6 +1,12 @@
 defmodule HTTPX.RequestError do
+  @moduledoc ~S"""
+  HTTPX request error.
+  """
   alias HTTPX.Request
   @predefined_messages []
+
+  @typedoc @moduledoc
+  @type t :: %__MODULE__{}
 
   defexception [
     :message,
@@ -11,6 +17,8 @@ defmodule HTTPX.RequestError do
     :options
   ]
 
+  @doc @moduledoc
+  @spec exception(term, term, list) :: t
   def exception(reason, message \\ nil, context \\ []) do
     options = context[:options] || []
 
@@ -29,6 +37,8 @@ defmodule HTTPX.RequestError do
     }
   end
 
+  @doc ~S"Print a HTTPX request exception"
+  @spec message(t) :: iolist
   def message(exception) do
     [
       to_string(exception.code),
