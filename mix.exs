@@ -12,6 +12,16 @@ defmodule Httpx.Mixfile do
       deps: deps(),
       package: package(),
 
+      # Testing
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ],
+      dialyzer: [ignore_warnings: ".dialyzer", plt_add_deps: true],
+
       # Docs
       name: "HTTPX",
       source_url: "https://github.com/IanLuites/httpx",
@@ -52,7 +62,8 @@ defmodule Httpx.Mixfile do
       {:jason, "~> 1.1"},
 
       # Dev / Test
-      {:analyze, ">= 0.0.13", only: [:dev, :test], runtime: false}
+      {:analyze, ">= 0.0.13", optional: true, only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.6", optional: true, only: :dev, runtime: false}
     ]
   end
 end
