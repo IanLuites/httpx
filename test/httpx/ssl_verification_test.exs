@@ -1,12 +1,8 @@
 defmodule HTTPX.SSLVerificationTest do
-  use ExUnit.Case, async: false
-
-  setup do
-    :hackney_pool.stop_pool(:default)
-  end
+  use ExUnit.Case, async: true
 
   test "by default uses SSL verification" do
-    assert HTTPX.get("https://self-signed.badssl.com/") ==
+    assert HTTPX.get("https://self-signed.badssl.com/", settings: [pool: :fail_tls_self]) ==
              {:error,
               {:tls_alert, {:bad_certificate, 'received CLIENT ALERT: Fatal - Bad Certificate'}}}
 
@@ -14,7 +10,7 @@ defmodule HTTPX.SSLVerificationTest do
   end
 
   test "with custom :ssl_options, makes sure it uses SSL verification" do
-    settings = [ssl_options: [versions: [:"tlsv1.2"]]]
+    settings = [ssl_options: [versions: [:"tlsv1.2"]], pool: :fail_tls_self_merged]
 
     assert HTTPX.get("https://self-signed.badssl.com/", settings: settings) ==
              {:error,

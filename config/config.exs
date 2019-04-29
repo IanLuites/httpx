@@ -7,3 +7,5 @@ config :httpx, :log,
   pre: true,
   post: true,
   prefix: "HTTPX: "
+
+config :httpx, default_pool: false
