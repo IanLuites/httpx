@@ -9,13 +9,17 @@ defmodule HTTPX.Request do
     basic: HTTPX.Auth.Basic
   ]
   @auth_methods Application.get_env(:httpx, :auth_extensions, []) ++ @default_auth
-
-  @default_settings [
-    ssl_options: [versions: [:"tlsv1.2"]],
-    pool: :default,
+  @default_timeouts [
     connect_timeout: 5_000,
     recv_timeout: 15_000
   ]
+  @default_ssl_options [ssl_options: [versions: [:"tlsv1.2"]]]
+
+  if p = Application.get_env(:httpx, :default_pool, :default) do
+    @default_settings [{:pool, p} | @default_timeouts ++ @default_ssl_options]
+  else
+    @default_settings @default_timeouts ++ @default_ssl_options
+  end
 
   @ssl_verify Application.get_env(:httpx, :ssl_verify, true)
 
@@ -97,7 +101,7 @@ defmodule HTTPX.Request do
                 versions: [:"tlsv1.2"],
                 verify: :verify_peer,
                 cacertfile: :certifi.cacertfile(),
-                depth: 2
+                depth: 3
               ],
               ssl
             )

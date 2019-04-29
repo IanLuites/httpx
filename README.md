@@ -48,6 +48,25 @@ be found at [https://hexdocs.pm/httpx](https://hexdocs.pm/httpx).
 
 ## Settings
 
+### Pool
+
+HTTPX will by default use a connection pool named `:default`
+to reuse connections.
+
+Sometimes reusing connections can lead to unexpected results,
+therefore it is possible to disable to the default pool by setting:
+
+```elixir
+config :httpx, default_pool: false
+```
+
+It is also possible to chang the default pool name by setting:
+
+```elixir
+config :httpx, default_pool: :custom_pool_name
+```
+_(Note: the name needs to be an atom.)_
+
 ### SSL / TLS
 
 SSL options can be passed as `:ssl_options`.
@@ -187,6 +206,7 @@ New features:
 * `HTTPX.Request` module to store request information and allow for request replays.
 * `HTTPX.Auth` can now modify more than headers.
 * Processors that allow for modifications to requests on a project/application level.
+* Configure (or disable) the default pool.
 
 Changes:
 
