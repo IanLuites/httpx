@@ -22,7 +22,6 @@ defmodule HTTPX.Request do
   end
 
   @ssl_verify Application.get_env(:httpx, :ssl_verify, true)
-
   @user_agent "HTTPX/#{Mix.Project.config()[:version]}"
 
   @doc false
@@ -95,17 +94,7 @@ defmodule HTTPX.Request do
 
       settings =
         if ssl = settings[:ssl_options] do
-          ssl =
-            Keyword.merge(
-              [
-                versions: [:"tlsv1.2"],
-                verify: :verify_peer,
-                cacertfile: :certifi.cacertfile(),
-                depth: 3
-              ],
-              ssl
-            )
-
+          ssl = Keyword.merge(base_ssl(), ssl)
           Keyword.put(settings, :ssl_options, ssl)
         else
           settings
@@ -152,5 +141,35 @@ defmodule HTTPX.Request do
       "http+unix://" <> _ -> url
       _ -> "http://" <> url
     end
+  end
+
+  @compile {:inline, base_ssl: 0}
+  @spec base_ssl :: Keyword.t()
+  if :erlang.system_info(:otp_release)
+     |> to_string
+     |> String.split(".")
+     |> List.first()
+     |> String.to_integer()
+     |> Kernel.>=(21) do
+    defp base_ssl,
+      do: [
+        versions: [:"tlsv1.2"],
+        verify: :verify_peer,
+        cacertfile: :certifi.cacertfile(),
+        depth: 3,
+        crl_check: :peer,
+        crl_cache: {:ssl_crl_cache, {:internal, [{:http, 5_000}]}},
+        customize_hostname_check: [
+          match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
+        ]
+      ]
+  else
+    defp base_ssl,
+      do: [
+        versions: [:"tlsv1.2"],
+        verify: :verify_peer,
+        cacertfile: :certifi.cacertfile(),
+        depth: 3
+      ]
   end
 end
