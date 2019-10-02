@@ -149,8 +149,8 @@ performed.
 For example this adds a custom tracking header to all requests:
 ```
 @impl HTTPX.Processor
-def pre_request(req = %{headers: headers}, %{header: header}) do
-  {:ok, %{req | headers: [{header, "..."} | headers]}}
+def pre_request(req = %{headers: req_headers}, %{header: header}) do
+  {:ok, %{req | headers: [{header, "..."} | req_headers]}}
 end
 ```
 (Note the `header` comes from the `init/1` above.)
