@@ -73,11 +73,11 @@ defmodule HTTPX.Processor do
   ### post_request/2
 
   The `post_request/2` hook is called after the request is performed,
-  but before the request is parsed.
+  but before the response is parsed.
 
   ### post_parse/2
 
-  The `post_parse/2` hook is called after the request is parsed.
+  The `post_parse/2` hook is called after the response is parsed.
 
   ## Example
 
