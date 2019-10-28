@@ -156,7 +156,7 @@ defmodule HTTPX.Request do
         versions: [:"tlsv1.2"],
         verify: :verify_peer,
         cacertfile: :certifi.cacertfile(),
-        depth: 3,
+        depth: 99,
         crl_check: :peer,
         crl_cache: {:ssl_crl_cache, {:internal, [{:http, 5_000}]}},
         customize_hostname_check: [
@@ -169,7 +169,7 @@ defmodule HTTPX.Request do
         versions: [:"tlsv1.2"],
         verify: :verify_peer,
         cacertfile: :certifi.cacertfile(),
-        depth: 3
+        depth: 99
       ]
   end
 end
