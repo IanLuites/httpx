@@ -288,9 +288,7 @@ defmodule HTTPX do
   defp create_stream_splitter(_, _), do: {:error, :invalid_stream_format}
 
   defp error_tuple_normalize(error = {:error, _}), do: error
-  defp error_tuple_normalize({:error, _, _}), do: {:error, :invalid_json}
   defp error_tuple_normalize(ok = {:ok, _}), do: ok
-  defp error_tuple_normalize(_), do: {:error, :invalid_json_generic}
 
   defp handle_response({:ok, %{status: status}}, true)
        when status < 200 or status >= 300,
