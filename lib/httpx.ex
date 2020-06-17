@@ -499,5 +499,13 @@ defmodule HTTPX do
   The function is idempotent, so there is no harm in calling it.
   """
   @spec optimize :: :ok
-  def optimize, do: HTTPX.Process.optimize()
+  def optimize do
+    # This fix is required to make optimize/0 compatible with Distillery.
+    spawn(fn ->
+      Enum.each(~w(kernel stdlib compiler elixir logger)a, &:application.ensure_started/1)
+      HTTPX.Process.optimize()
+    end)
+
+    :ok
+  end
 end
