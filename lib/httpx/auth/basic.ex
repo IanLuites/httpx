@@ -1,17 +1,10 @@
 defmodule HTTPX.Auth.Basic do
   @moduledoc false
-
   use HTTPX.Auth
 
-  @impl true
-  def auth(_method, _url, _headers, _body, options) do
-    username = options[:username]
-    password = options[:password]
-
-    token =
-      "#{username}:#{password}"
-      |> Base.encode64
-
-    [{"authorization", "Basic " <> token}]
+  @impl HTTPX.Auth
+  def auth(req = %{headers: headers}, options) do
+    token = Base.encode64("#{options[:username]}:#{options[:password]}")
+    %{req | headers: [{"authorization", "Basic " <> token} | headers]}
   end
 end

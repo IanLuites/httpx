@@ -7,15 +7,15 @@ defmodule HTTPX.Response do
   HTTP response.
   """
   @type t :: %__MODULE__{
-    status: pos_integer,
-    headers: [{String.t, String.t}],
-    body: binary | map | list,
-  }
+          status: pos_integer,
+          headers: [{String.t(), String.t()}],
+          body: binary | map | list
+        }
 
   @enforce_keys [:status]
   defstruct [
     :status,
     headers: [],
-    body: "",
+    body: ""
   ]
 end

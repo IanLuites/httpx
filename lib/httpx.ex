@@ -2,32 +2,20 @@ defmodule HTTPX do
   @moduledoc ~S"""
   Simple HTTP(s) client with integrated auth methods.
   """
-
-  alias HTTPX.RequestError
-  alias HTTPX.Response
   use HTTPX.Log
+  alias HTTPX.{Request, RequestError, Response}
 
   @type post_body ::
           String.t() | {:urlencoded, map | keyword} | {:json, map | keyword | String.t()}
 
-  @default_auth [
-    basic: HTTPX.Auth.Basic
-  ]
-  @auth_methods Application.get_env(:httpx, :auth_extensions, []) ++ @default_auth
-
-  @default_settings [
-    ssl_options: [versions: [:"tlsv1.2"]],
-    pool: :default,
-    connect_timeout: 5_000,
-    recv_timeout: 15_000
-  ]
-
-  @doc false
-  def __default_settings__, do: @default_settings
-
   @post_header_urlencoded {"Content-Type", "application/x-www-form-urlencoded"}
   @post_header_json {"Content-Type", "application/json"}
   @post_header_file {"Content-Type", "application/octet-stream"}
+
+  @content_encoding_gzip {"Content-Encoding", "gzip"}
+  @content_encoding_compress {"Content-Encoding", "compress"}
+  @content_encoding_deflate {"Content-Encoding", "deflate"}
+  @content_encoding_br {"Content-Encoding", "br"}
 
   @dialyzer {
     [:no_return, :no_match, :nowarn_function],
@@ -84,7 +72,7 @@ defmodule HTTPX do
   For options see: `&request/3`.
   """
   @spec delete(String.t(), keyword) :: {:ok, Response.t()} | {:error, term}
-  def delete(url, options \\ []), do: :delete |> request(url, options)
+  def delete(url, options \\ []), do: request(:delete, url, options)
 
   @doc ~S"""
   Performs a request.
@@ -104,40 +92,37 @@ defmodule HTTPX do
   """
   @spec request(term, String.t(), keyword) :: {:ok, Response.t()} | {:error, term}
   def request(method, url, options \\ []) do
-    full_url = generate_url(url, options)
+    method
+    |> Request.prepare(url, options)
+    |> perform()
+  end
 
-    headers = options[:headers] || []
+  @doc ~S"""
+  Perform a given request.
+  """
+  @spec perform(HTTPX.Request.t()) :: {:ok, HTTPX.Response.t()} | {:error, term}
+  def perform(request) do
+    %{
+      method: m,
+      url: u,
+      body: b,
+      headers: h,
+      settings: s,
+      format: format,
+      fail: fail
+    } = __MODULE__.Process.pre_request(request)
 
-    headers =
-      if List.keymember?(headers, "user-agent", 0),
-        do: headers,
-        else: [{"user-agent", "HTTPX/0.0.16"} | headers]
+    Log.log(m, u, h, b)
+    response = :hackney.request(m, u, h, b, s)
+    Log.log(m, u, h, b, response)
 
-    body = options[:body] || ""
-
-    hackney_settings = Keyword.merge(@default_settings, options[:settings] || [])
-
-    hackney_settings =
-      if options[:format] == :stream, do: hackney_settings, else: [:with_body | hackney_settings]
-
-    auth = options[:auth]
-
-    headers =
-      if auth_method = @auth_methods[auth] || auth do
-        auth_method.auth(method, full_url, headers, body, options) ++ headers
-      else
-        headers
-      end
-
-    Log.log(method, full_url, headers, body)
-
-    response = :hackney.request(method, full_url, headers, body, hackney_settings)
-
-    Log.log(method, full_url, headers, body, response)
-
-    response
-    |> parse_response(options[:format] || :text, options)
-    |> handle_response(options[:fail] || false)
+    case response
+         |> __MODULE__.Process.post_request()
+         |> parse_response(format, s)
+         |> handle_response(fail) do
+      {:ok, response} -> __MODULE__.Process.post_parse(response)
+      error -> error
+    end
   end
 
   @doc ~S"""
@@ -163,40 +148,18 @@ defmodule HTTPX do
 
   ### Helpers ###
 
-  defp generate_url(url, options) do
-    uri = URI.parse(url)
-
-    full_url =
-      cond do
-        not Keyword.has_key?(options, :params) ->
-          url
-
-        uri.query ->
-          url <> "&" <> query_encode(options[:params] || %{})
-
-        uri.path ->
-          url <> "?" <> query_encode(options[:params] || %{})
-
-        true ->
-          url <> "/?" <> query_encode(options[:params] || %{})
-      end
-
-    full_url
-    |> to_string
-    |> default_process_url
-  end
-
   defp parse_response({:ok, status, resp_headers, resp_body}, format, opts) do
-    with {:ok, body} <- parse_body(resp_body, format, opts) do
-      response = %Response{
-        status: status,
-        headers: resp_headers,
-        body: body
-      }
+    case parse_body(resp_body, format, opts) do
+      {:ok, body} ->
+        {:ok,
+         %Response{
+           status: status,
+           headers: resp_headers,
+           body: body
+         }}
 
-      {:ok, response}
-    else
-      error -> error
+      error ->
+        error
     end
   end
 
@@ -209,13 +172,9 @@ defmodule HTTPX do
   defp parse_body(body, format, opts)
 
   defp parse_body(body, :text, _opts), do: {:ok, body}
-  defp parse_body(body, :json, _opts), do: body |> Jason.decode() |> error_tuple_normalize()
-
-  defp parse_body(body, :json_atoms, _opts),
-    do: body |> Jason.decode(keys: :atoms) |> error_tuple_normalize()
-
-  defp parse_body(body, :json_atoms!, _opts),
-    do: body |> Jason.decode(keys: :atoms!) |> error_tuple_normalize()
+  defp parse_body(body, :json, _opts), do: body |> Jason.decode()
+  defp parse_body(body, :json_atoms, _opts), do: body |> Jason.decode(keys: :atoms)
+  defp parse_body(body, :json_atoms!, _opts), do: body |> Jason.decode(keys: :atoms!)
 
   defp parse_body(body, :stream, opts) do
     stream_opts = opts[:stream] || []
@@ -240,6 +199,7 @@ defmodule HTTPX do
     create_stream_splitter(:separated, Keyword.merge(opts, separator: ~r/\r?\n/, ends_with: "\n"))
   end
 
+  # credo:disable-for-next-line
   defp create_stream_splitter(:separated, opts) do
     if separator = opts[:separator] do
       ends_with? =
@@ -287,28 +247,18 @@ defmodule HTTPX do
 
   defp create_stream_splitter(_, _), do: {:error, :invalid_stream_format}
 
-  defp error_tuple_normalize(error = {:error, _}), do: error
-  defp error_tuple_normalize({:error, _, _}), do: {:error, :invalid_json}
-  defp error_tuple_normalize(ok = {:ok, _}), do: ok
-  defp error_tuple_normalize(_), do: {:error, :invalid_json_generic}
-
   defp handle_response({:ok, %{status: status}}, true)
        when status < 200 or status >= 300,
        do: {:error, :http_status_failure}
 
   defp handle_response(response, _), do: response
 
-  defp default_process_url(url) do
-    case url |> String.slice(0, 12) |> String.downcase() do
-      "http://" <> _ -> url
-      "https://" <> _ -> url
-      "http+unix://" <> _ -> url
-      _ -> "http://" <> url
-    end
-  end
-
   ### Query Encoding ###
 
+  @doc ~S"""
+  Encode a map as query.
+  """
+  @spec query_encode(map) :: binary
   def query_encode(data) do
     data
     |> query_encode("")
@@ -337,24 +287,29 @@ defmodule HTTPX do
     {:ok,
      options
      |> Keyword.update(:headers, [@post_header_urlencoded], &[@post_header_urlencoded | &1])
-     |> Keyword.put(:body, query_encode(body))}
+     |> Keyword.put(:body, query_encode(body))
+     |> body_maybe_compress(options[:compress])}
   end
 
   defp body_encoding({:file, body}, options) do
     {:ok,
      options
      |> Keyword.update(:headers, [@post_header_file], &[@post_header_file | &1])
-     |> Keyword.put(:body, body)}
+     |> Keyword.put(:body, body)
+     |> body_maybe_compress(options[:compress])}
   end
 
   defp body_encoding({:json, body}, options) do
-    with {:ok, body} <- Jason.encode(body) do
-      {:ok,
-       options
-       |> Keyword.update(:headers, [@post_header_json], &[@post_header_json | &1])
-       |> Keyword.put(:body, body)}
-    else
-      _error -> {:error, :body_not_valid_json}
+    case Jason.encode(body) do
+      {:ok, body} ->
+        {:ok,
+         options
+         |> Keyword.update(:headers, [@post_header_json], &[@post_header_json | &1])
+         |> Keyword.put(:body, body)
+         |> body_maybe_compress(options[:compress])}
+
+      _error ->
+        {:error, :body_not_valid_json}
     end
   end
 
@@ -371,10 +326,41 @@ defmodule HTTPX do
         end
       )
 
-    {:ok, Keyword.put(options, :body, {:multipart, body})}
+    {:ok,
+     options |> Keyword.put(:body, {:multipart, body}) |> body_maybe_compress(options[:compress])}
   end
 
-  defp body_encoding(body, options), do: {:ok, Keyword.put(options, :body, body)}
+  defp body_encoding(body, options),
+    do: {:ok, Keyword.put(options, :body, body) |> body_maybe_compress(options[:compress])}
+
+  defp body_maybe_compress(options, compression)
+  defp body_maybe_compress(options, compression) when compression in [nil, :identity], do: options
+
+  defp body_maybe_compress(options, :gzip) do
+    options
+    |> Keyword.update(:headers, [@content_encoding_gzip], &[@content_encoding_gzip | &1])
+    |> Keyword.update!(:body, &:zlib.gzip/1)
+  end
+
+  defp body_maybe_compress(options, :compress) do
+    options
+    |> Keyword.update(:headers, [@content_encoding_compress], &[@content_encoding_compress | &1])
+    |> Keyword.update!(:body, &:zlib.compress/1)
+  end
+
+  defp body_maybe_compress(options, :deflate) do
+    options
+    |> Keyword.update(:headers, [@content_encoding_deflate], &[@content_encoding_deflate | &1])
+    |> Keyword.update!(:body, &:zlib.compress/1)
+  end
+
+  defp body_maybe_compress(options, :br) do
+    options
+    |> Keyword.update(:headers, [@content_encoding_br], &[@content_encoding_br | &1])
+    |> Keyword.update!(:body, &apply(:brotli, :encode, [&1]))
+  rescue
+    UndefinedFunctionError -> reraise "Missing `:brotli` dependency.", __STACKTRACE__
+  end
 
   defp encode_mp_binfile(name, data, opts \\ []) do
     filename = opts[:filename] || name
@@ -397,7 +383,7 @@ defmodule HTTPX do
 
   For options see: `&get/2`.
   """
-  @spec get!(String.t(), keyword) :: Response.t()
+  @spec get!(String.t(), keyword) :: Response.t() | no_return
   def get!(url, options \\ []) do
     case request(:get, url, options) do
       {:ok, response} ->
@@ -418,7 +404,7 @@ defmodule HTTPX do
 
   For options see: `&post/3`.
   """
-  @spec post!(String.t(), post_body, keyword) :: Response.t()
+  @spec post!(String.t(), post_body, keyword) :: Response.t() | no_return
   def post!(url, body, options \\ []) do
     case post(url, body, options) do
       {:ok, response} ->
@@ -440,7 +426,7 @@ defmodule HTTPX do
 
   For options see: `&patch/3`.
   """
-  @spec patch!(String.t(), post_body, keyword) :: Response.t()
+  @spec patch!(String.t(), post_body, keyword) :: Response.t() | no_return
   def patch!(url, body, options \\ []) do
     case patch(url, body, options) do
       {:ok, response} ->
@@ -462,7 +448,7 @@ defmodule HTTPX do
 
   For options see: `&put/3`.
   """
-  @spec put!(String.t(), post_body, keyword) :: Response.t()
+  @spec put!(String.t(), post_body, keyword) :: Response.t() | no_return
   def put!(url, body, options \\ []) do
     case put(url, body, options) do
       {:ok, response} ->
@@ -484,7 +470,7 @@ defmodule HTTPX do
 
   For options see: `&delete/2`.
   """
-  @spec delete!(String.t(), keyword) :: Response.t()
+  @spec delete!(String.t(), keyword) :: Response.t() | no_return
   def delete!(url, options \\ []) do
     case request(:delete, url, options) do
       {:ok, response} ->
@@ -498,5 +484,28 @@ defmodule HTTPX do
 
         raise RequestError.exception(reason, nil, context)
     end
+  end
+
+  ## Optimize Process On Load ##
+
+  @on_load :optimize
+
+  @doc ~S"""
+  Optimize HTTPX processors.
+
+  This is automatically called on HTTPX load.
+  So there is no need to call it manually.
+
+  The function is idempotent, so there is no harm in calling it.
+  """
+  @spec optimize :: :ok
+  def optimize do
+    # This fix is required to make optimize/0 compatible with Distillery.
+    spawn(fn ->
+      Enum.each(~w(kernel stdlib compiler elixir logger)a, &:application.ensure_started/1)
+      HTTPX.Process.optimize()
+    end)
+
+    :ok
   end
 end

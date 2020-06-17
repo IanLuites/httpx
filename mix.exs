@@ -5,12 +5,22 @@ defmodule Httpx.Mixfile do
     [
       app: :httpx,
       description: "Simple Elixir library with HTTP[S] helpers.",
-      version: "0.0.16",
+      version: "0.1.0",
       elixir: "~> 1.4",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package(),
+
+      # Testing
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test
+      ],
+      dialyzer: [ignore_warnings: ".dialyzer", plt_add_deps: true],
 
       # Docs
       name: "HTTPX",
@@ -48,11 +58,12 @@ defmodule Httpx.Mixfile do
 
   defp deps do
     [
-      {:hackney, "~> 1.15"},
-      {:jason, "~> 1.1"},
+      {:hackney, "~> 1.16"},
+      {:jason, "~> 1.2"},
+      {:brotli, "~> 0.2.1", optional: true},
 
       # Dev / Test
-      {:analyze, ">= 0.0.13", only: [:dev, :test], runtime: false}
+      {:heimdallr, ">= 0.0.2", only: [:dev, :test]}
     ]
   end
 end
