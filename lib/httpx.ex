@@ -357,7 +357,9 @@ defmodule HTTPX do
   defp body_maybe_compress(options, :br) do
     options
     |> Keyword.update(:headers, [@content_encoding_br], &[@content_encoding_br | &1])
-    |> Keyword.update!(:body, &:brotli.encode/1)
+    |> Keyword.update!(:body, &apply(:brotli, :encode, [&1]))
+  rescue
+    UndefinedFunctionError -> reraise "Missing `:brotli` dependency.", __STACKTRACE__
   end
 
   defp encode_mp_binfile(name, data, opts \\ []) do
