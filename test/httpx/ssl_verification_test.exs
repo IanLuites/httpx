@@ -8,7 +8,7 @@ defmodule HTTPX.SSLVerificationTest do
              {:error,
               {:tls_alert,
                {:bad_certificate,
-                'TLS client: In state certify at ssl_handshake.erl:1664 generated CLIENT ALERT: Fatal - Bad Certificate\n'}}}
+                'TLS client: In state certify at ssl_handshake.erl:1779 generated CLIENT ALERT: Fatal - Bad Certificate\n'}}}
 
     assert {:ok, _} = HTTPX.get("https://ifconfig.co/")
   end
@@ -20,7 +20,7 @@ defmodule HTTPX.SSLVerificationTest do
              {:error,
               {:tls_alert,
                {:bad_certificate,
-                'TLS client: In state certify at ssl_handshake.erl:1664 generated CLIENT ALERT: Fatal - Bad Certificate\n'}}}
+                'TLS client: In state certify at ssl_handshake.erl:1779 generated CLIENT ALERT: Fatal - Bad Certificate\n'}}}
 
     assert {:ok, _} = HTTPX.get("https://ifconfig.co/", settings: settings)
   end
