@@ -1,25 +1,25 @@
 :0: Unknown function certifi:cacertfile/0
-lib/httpx.ex:70: Function delete/1 has no local return
-lib/httpx.ex:70: Function delete/2 has no local return
-lib/httpx.ex:137: The created fun has no local return
-lib/httpx.ex:146: The pattern <{'ok', _status@1, _resp_headers@1, _resp_body@1}, _format@1, _opts@1> can never match the type <{'error',_} | {'ok',tuple()},atom(),[any()]>
-lib/httpx.ex:160: The pattern <{'ok', _status@1, _resp_headers@1}, _format@1, _opts@1> can never match the type <{'error',_} | {'ok',tuple()},atom(),[any()]>
-lib/httpx.ex:168: Function parse_body/3 will never be called
-lib/httpx.ex:185: Function create_stream_splitter/2 will never be called
-lib/httpx.ex:248: Function error_tuple_normalize/1 will never be called
-lib/httpx.ex:253: The pattern <{'ok', #{'status':=_status@1}}, 'true'> can never match the type <{'error',_} | {'ok',tuple()},boolean()>
-lib/httpx.ex:377: The pattern {'ok', _response@1} can never match the type {'error','body_not_valid_json'}
-lib/httpx.ex:399: The pattern {'ok', _response@1} can never match the type {'error','body_not_valid_json'}
-lib/httpx.ex:421: The pattern {'ok', _response@1} can never match the type {'error','body_not_valid_json'}
+:0: Unknown function public_key:pkix_verify_hostname_match_fun/1
+lib/httpx.ex:75: Function delete/1 has no local return
+lib/httpx.ex:75: Function delete/2 has no local return
+lib/httpx.ex:142: The created fun has no local return
+lib/httpx.ex:151: The pattern <{'ok', _status@1, _resp_headers@1, _resp_body@1}, _format@1, _opts@1> can never match the type <{'error',_} | {'ok',tuple()},atom(),[any()]>
+lib/httpx.ex:166: The pattern <{'ok', _status@1, _resp_headers@1}, _format@1, _opts@1> can never match the type <{'error',_} | {'ok',tuple()},atom(),[any()]>
+lib/httpx.ex:174: Function parse_body/3 will never be called
+lib/httpx.ex:187: Function create_stream_splitter/2 will never be called
+lib/httpx.ex:250: The pattern <{'ok', #{'status':=_status@1}}, 'true'> can never match the type <{'error',_} | {'ok',tuple()},boolean()>
+lib/httpx.ex:387: Function 'get!'/1 has no local return
+lib/httpx.ex:387: Function 'get!'/2 has no local return
+lib/httpx.ex:408: Function 'post!'/2 has no local return
+lib/httpx.ex:408: Function 'post!'/3 has no local return
+lib/httpx.ex:410: The pattern {'ok', _response@1} can never match the type {'error','body_not_valid_json'}
+lib/httpx.ex:430: Function 'patch!'/2 has no local return
+lib/httpx.ex:430: Function 'patch!'/3 has no local return
+lib/httpx.ex:432: The pattern {'ok', _response@1} can never match the type {'error','body_not_valid_json'}
+lib/httpx.ex:452: Function 'put!'/2 has no local return
+lib/httpx.ex:452: Function 'put!'/3 has no local return
+lib/httpx.ex:454: The pattern {'ok', _response@1} can never match the type {'error','body_not_valid_json'}
+lib/httpx.ex:474: Function 'delete!'/1 has no local return
+lib/httpx.ex:474: Function 'delete!'/2 has no local return
 lib/httpx/request_error.ex:41: The return type maybe_improper_list(binary() | maybe_improper_list(any(),binary() | []) | byte(),binary() | []) in the specification of message/1 is not a subtype of binary(), which is the expected return type for the callback of the 'Elixir.Exception' behaviour
-lib/httpx/request_error.ex:41: Invalid type specification for function 'Elixir.HTTPX.RequestError':message/1. The success typing is (atom() | #{'body':=_, 'code':=_, 'headers':=_, 'options':='nil' | [{_,_}] | map(), 'url':=_, _=>_}) -> binary()
-lib/httpx.ex:354: Function 'get!'/1 has no local return
-lib/httpx.ex:354: Function 'get!'/2 has no local return
-lib/httpx.ex:375: Function 'post!'/2 has no local return
-lib/httpx.ex:375: Function 'post!'/3 has no local return
-lib/httpx.ex:397: Function 'patch!'/2 has no local return
-lib/httpx.ex:397: Function 'patch!'/3 has no local return
-lib/httpx.ex:419: Function 'put!'/2 has no local return
-lib/httpx.ex:419: Function 'put!'/3 has no local return
-lib/httpx.ex:441: Function 'delete!'/1 has no local return
-lib/httpx.ex:441: Function 'delete!'/2 has no local return
+lib/httpx/request_error.ex:41: Invalid type specification for function 'Elixir.HTTPX.RequestError':message/1. The success typing is (atom() | #{'body':=_, 'code':=_, 'headers':=_, 'options':='nil' | maybe_improper_list() | map(), 'url':=_, _=>_}) -> binary()
