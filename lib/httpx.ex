@@ -12,6 +12,11 @@ defmodule HTTPX do
   @post_header_json {"Content-Type", "application/json"}
   @post_header_file {"Content-Type", "application/octet-stream"}
 
+  @content_encoding_gzip {"Content-Encoding", "gzip"}
+  @content_encoding_compress {"Content-Encoding", "compress"}
+  @content_encoding_deflate {"Content-Encoding", "deflate"}
+  @content_encoding_br {"Content-Encoding", "br"}
+
   @dialyzer {
     [:no_return, :no_match, :nowarn_function],
     get: 1, get: 2, request: 2, request: 3
@@ -67,7 +72,7 @@ defmodule HTTPX do
   For options see: `&request/3`.
   """
   @spec delete(String.t(), keyword) :: {:ok, Response.t()} | {:error, term}
-  def delete(url, options \\ []), do: :delete |> request(url, options)
+  def delete(url, options \\ []), do: request(:delete, url, options)
 
   @doc ~S"""
   Performs a request.
@@ -144,16 +149,17 @@ defmodule HTTPX do
   ### Helpers ###
 
   defp parse_response({:ok, status, resp_headers, resp_body}, format, opts) do
-    with {:ok, body} <- parse_body(resp_body, format, opts) do
-      response = %Response{
-        status: status,
-        headers: resp_headers,
-        body: body
-      }
+    case parse_body(resp_body, format, opts) do
+      {:ok, body} ->
+        {:ok,
+         %Response{
+           status: status,
+           headers: resp_headers,
+           body: body
+         }}
 
-      {:ok, response}
-    else
-      error -> error
+      error ->
+        error
     end
   end
 
@@ -166,13 +172,9 @@ defmodule HTTPX do
   defp parse_body(body, format, opts)
 
   defp parse_body(body, :text, _opts), do: {:ok, body}
-  defp parse_body(body, :json, _opts), do: body |> Jason.decode() |> error_tuple_normalize()
-
-  defp parse_body(body, :json_atoms, _opts),
-    do: body |> Jason.decode(keys: :atoms) |> error_tuple_normalize()
-
-  defp parse_body(body, :json_atoms!, _opts),
-    do: body |> Jason.decode(keys: :atoms!) |> error_tuple_normalize()
+  defp parse_body(body, :json, _opts), do: body |> Jason.decode()
+  defp parse_body(body, :json_atoms, _opts), do: body |> Jason.decode(keys: :atoms)
+  defp parse_body(body, :json_atoms!, _opts), do: body |> Jason.decode(keys: :atoms!)
 
   defp parse_body(body, :stream, opts) do
     stream_opts = opts[:stream] || []
@@ -245,11 +247,6 @@ defmodule HTTPX do
 
   defp create_stream_splitter(_, _), do: {:error, :invalid_stream_format}
 
-  defp error_tuple_normalize(error = {:error, _}), do: error
-  defp error_tuple_normalize({:error, _, _}), do: {:error, :invalid_json}
-  defp error_tuple_normalize(ok = {:ok, _}), do: ok
-  defp error_tuple_normalize(_), do: {:error, :invalid_json_generic}
-
   defp handle_response({:ok, %{status: status}}, true)
        when status < 200 or status >= 300,
        do: {:error, :http_status_failure}
@@ -290,24 +287,29 @@ defmodule HTTPX do
     {:ok,
      options
      |> Keyword.update(:headers, [@post_header_urlencoded], &[@post_header_urlencoded | &1])
-     |> Keyword.put(:body, query_encode(body))}
+     |> Keyword.put(:body, query_encode(body))
+     |> body_maybe_compress(options[:compress])}
   end
 
   defp body_encoding({:file, body}, options) do
     {:ok,
      options
      |> Keyword.update(:headers, [@post_header_file], &[@post_header_file | &1])
-     |> Keyword.put(:body, body)}
+     |> Keyword.put(:body, body)
+     |> body_maybe_compress(options[:compress])}
   end
 
   defp body_encoding({:json, body}, options) do
-    with {:ok, body} <- Jason.encode(body) do
-      {:ok,
-       options
-       |> Keyword.update(:headers, [@post_header_json], &[@post_header_json | &1])
-       |> Keyword.put(:body, body)}
-    else
-      _error -> {:error, :body_not_valid_json}
+    case Jason.encode(body) do
+      {:ok, body} ->
+        {:ok,
+         options
+         |> Keyword.update(:headers, [@post_header_json], &[@post_header_json | &1])
+         |> Keyword.put(:body, body)
+         |> body_maybe_compress(options[:compress])}
+
+      _error ->
+        {:error, :body_not_valid_json}
     end
   end
 
@@ -324,10 +326,39 @@ defmodule HTTPX do
         end
       )
 
-    {:ok, Keyword.put(options, :body, {:multipart, body})}
+    {:ok,
+     options |> Keyword.put(:body, {:multipart, body}) |> body_maybe_compress(options[:compress])}
   end
 
-  defp body_encoding(body, options), do: {:ok, Keyword.put(options, :body, body)}
+  defp body_encoding(body, options),
+    do: {:ok, Keyword.put(options, :body, body) |> body_maybe_compress(options[:compress])}
+
+  defp body_maybe_compress(options, compression)
+  defp body_maybe_compress(options, compression) when compression in [nil, :identity], do: options
+
+  defp body_maybe_compress(options, :gzip) do
+    options
+    |> Keyword.update(:headers, [@content_encoding_gzip], &[@content_encoding_gzip | &1])
+    |> Keyword.update!(:body, &:zlib.gzip/1)
+  end
+
+  defp body_maybe_compress(options, :compress) do
+    options
+    |> Keyword.update(:headers, [@content_encoding_compress], &[@content_encoding_compress | &1])
+    |> Keyword.update!(:body, &:zlib.compress/1)
+  end
+
+  defp body_maybe_compress(options, :deflate) do
+    options
+    |> Keyword.update(:headers, [@content_encoding_deflate], &[@content_encoding_deflate | &1])
+    |> Keyword.update!(:body, &:zlib.compress/1)
+  end
+
+  defp body_maybe_compress(options, :br) do
+    options
+    |> Keyword.update(:headers, [@content_encoding_br], &[@content_encoding_br | &1])
+    |> Keyword.update!(:body, &:brotli.encode/1)
+  end
 
   defp encode_mp_binfile(name, data, opts \\ []) do
     filename = opts[:filename] || name
