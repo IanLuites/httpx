@@ -85,4 +85,6 @@ defmodule HTTPX.RequestError do
     end)
     |> Enum.join("\r\n    ")
   end
+
+  @spec exception(msg :: term) :: Exception.t()
 end
