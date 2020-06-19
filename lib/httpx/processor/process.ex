@@ -73,7 +73,7 @@ defmodule HTTPX.Process do
 
   # POST REQUEST
   @doc ~S"Apply all post request processors."
-  @spec post_request(tuple) :: {:ok, tuple} | {:error, term}
+  @spec post_request(tuple) :: tuple
   def post_request(req),
     do:
       @processors

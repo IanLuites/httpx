@@ -38,7 +38,7 @@ defmodule HTTPX.RequestError do
   end
 
   @doc ~S"Print a HTTPX request exception"
-  @spec message(t) :: iolist
+  @spec message(t) :: binary
   def message(exception) do
     [
       to_string(exception.code),

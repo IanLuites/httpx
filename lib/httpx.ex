@@ -6,7 +6,11 @@ defmodule HTTPX do
   alias HTTPX.{Request, RequestError, Response}
 
   @type post_body ::
-          String.t() | {:urlencoded, map | keyword} | {:json, map | keyword | String.t()}
+          binary
+          | {:urlencoded, map | keyword}
+          | {:file, String.t()}
+          | {:json, term}
+          | {:multipart, list}
 
   @post_header_urlencoded {"Content-Type", "application/x-www-form-urlencoded"}
   @post_header_json {"Content-Type", "application/json"}
@@ -301,14 +305,14 @@ defmodule HTTPX do
 
   defp body_encoding({:json, body}, options) do
     case Jason.encode(body) do
-      {:ok, body} ->
+      {:ok, encoded} ->
         {:ok,
          options
          |> Keyword.update(:headers, [@post_header_json], &[@post_header_json | &1])
-         |> Keyword.put(:body, body)
+         |> Keyword.put(:body, encoded)
          |> body_maybe_compress(options[:compress])}
 
-      _error ->
+      {:error, _} ->
         {:error, :body_not_valid_json}
     end
   end
