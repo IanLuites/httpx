@@ -157,7 +157,8 @@ defmodule HTTPX.Request do
         verify: :verify_peer,
         cacertfile: :certifi.cacertfile(),
         depth: 99,
-        crl_check: :peer,
+        # crl_check: :peer,
+        crl_check: :best_effort,
         crl_cache: {:ssl_crl_cache, {:internal, [{:http, 5_000}]}},
         customize_hostname_check: [
           match_fun: :public_key.pkix_verify_hostname_match_fun(:https)
