@@ -54,7 +54,7 @@ defmodule HTTPX.Request do
   @doc ~S"""
   Prepare a request.
   """
-  @spec prepare(atom, String.t(), Keyword.t()) :: {:ok, t} | {:error, atom}
+  @spec prepare(atom, String.t(), Keyword.t()) :: t
   def prepare(method, url, options \\ []) do
     request = %__MODULE__{
       method: method,
