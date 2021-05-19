@@ -27,9 +27,16 @@ defmodule HTTPX.RequestError do
       |> Keyword.delete(:body)
       |> Keyword.delete(:headers)
 
+    msg =
+      cond do
+        not is_nil(message) -> message
+        is_atom(reason) -> @predefined_messages[reason] || to_string(reason)
+        :complex -> inspect(reason)
+      end
+
     %__MODULE__{
       code: reason,
-      message: message || @predefined_messages[reason] || to_string(reason),
+      message: msg,
       url: context[:url],
       headers: context[:headers] || options[:headers] || [],
       body: context[:body] || options[:body],

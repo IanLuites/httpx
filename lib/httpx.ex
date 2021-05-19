@@ -21,11 +21,6 @@ defmodule HTTPX do
   @content_encoding_deflate {"Content-Encoding", "deflate"}
   @content_encoding_br {"Content-Encoding", "br"}
 
-  @dialyzer {
-    [:no_return, :no_match, :nowarn_function],
-    get: 1, get: 2, request: 2, request: 3
-  }
-
   @doc ~S"""
   Performs a get request.
 
