@@ -141,8 +141,8 @@ defmodule HTTPX do
     |> Enum.map(&{&1, request(method, to_string(%{uri | host: &1}), opts)})
     |> Enum.group_by(&elem(elem(&1, 1), 0))
     |> Enum.into(%{})
-    |> Map.update(:ok, [], &Enum.into(&1, %{}, fn {ip, r} -> {ip, elem(r, 1)} end))
-    |> Map.update(:error, [], &Enum.into(&1, %{}))
+    |> Map.update(:ok, %{}, &Enum.into(&1, %{}, fn {ip, r} -> {ip, elem(r, 1)} end))
+    |> Map.update(:error, %{}, &Enum.into(&1, %{}))
   end
 
   ### Helpers ###
