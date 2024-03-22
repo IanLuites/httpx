@@ -1,5 +1,4 @@
-use Mix.Config
-
+import Config
 config :httpx, auth_extensions: []
 
 config :httpx, :log,

@@ -209,7 +209,7 @@ defmodule HTTPX do
           is_binary(separator) ->
             &String.ends_with?(&1, separator)
 
-          Regex.regex?(separator) ->
+          separator = %Regex{} ->
             source = Regex.source(separator)
 
             if Regex.escape(source) == source do

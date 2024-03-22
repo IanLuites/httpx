@@ -5,7 +5,7 @@ defmodule Httpx.Mixfile do
     [
       app: :httpx,
       description: "Simple Elixir library with HTTP[S] helpers.",
-      version: "0.1.6",
+      version: "0.1.8",
       elixir: "~> 1.4",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,

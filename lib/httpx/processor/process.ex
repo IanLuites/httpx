@@ -58,7 +58,7 @@ defmodule HTTPX.Process do
   import HTTPX.Process.Helpers
 
   @processors :httpx
-              |> Application.get_env(:processors, [])
+              |> Application.compile_env(:processors, [])
               |> Enum.map(&if(is_tuple(&1), do: &1, else: {&1, []}))
 
   # PRE REQUEST
@@ -127,7 +127,7 @@ defmodule HTTPX.Process do
             import HTTPX.Process.Helpers
 
             @processors :httpx
-                        |> Application.get_env(:processors, [])
+                        |> Application.compile_env(:processors, [])
                         |> Enum.map(&if(is_tuple(&1), do: &1, else: {&1, []}))
                         |> Enum.map(&do_init/1)
 

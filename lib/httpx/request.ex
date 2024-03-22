@@ -1,4 +1,6 @@
 defmodule HTTPX.Request do
+  require Logger
+
   @moduledoc ~S"""
   A prepared HTTP request.
 
@@ -8,21 +10,27 @@ defmodule HTTPX.Request do
   @default_auth [
     basic: HTTPX.Auth.Basic
   ]
-  @auth_methods Application.get_env(:httpx, :auth_extensions, []) ++ @default_auth
+  @auth_methods Application.compile_env(:httpx, :auth_extensions, []) ++ @default_auth
   @default_timeouts [
     connect_timeout: 5_000,
     recv_timeout: 15_000
   ]
   @default_ssl_options [ssl_options: [versions: [:"tlsv1.2"]]]
 
-  if p = Application.get_env(:httpx, :default_pool, :default) do
+  if p = Application.compile_env(:httpx, :default_pool, :default) do
     @default_settings [{:pool, p} | @default_timeouts ++ @default_ssl_options]
   else
     @default_settings @default_timeouts ++ @default_ssl_options
   end
 
-  @ssl_verify Application.get_env(:httpx, :ssl_verify, true)
+  @ssl_verify Application.compile_env(:httpx, :ssl_verify, true)
   @user_agent "HTTPX/#{Mix.Project.config()[:version]}"
+
+  @trace_config Application.compile_env(:httpx, :trace_settings, %{})
+  @trace_settings is_map(@trace_config) &&
+                    Map.merge(@trace_config, %{header: "x-request-id", key: :request_id})
+  @trace_header @trace_settings && Map.fetch!(@trace_settings, :header)
+  @trace_key @trace_settings && Map.fetch!(@trace_settings, :key)
 
   @doc false
   @spec __default_settings__ :: Keyword.t()
@@ -79,11 +87,44 @@ defmodule HTTPX.Request do
 
   @spec headers(Keyword.t()) :: [{String.t(), String.t()}]
   defp headers(options) do
-    headers = options[:headers] || []
+    options
+    |> Keyword.get(:headers, [])
+    |> validate_headers()
+    |> header_user_agent()
+    |> trace_headers()
+  end
 
+  defp validate_headers(headers)
+  defp validate_headers(headers) when is_list(headers), do: headers
+
+  defp validate_headers(_headers) do
+    Logger.warning(
+      ~S|Invalid headers passed. Headers should be in the format: [{"header", "value"}]|
+    )
+
+    []
+  end
+
+  defp header_user_agent(headers) do
     if List.keymember?(headers, "user-agent", 0),
       do: headers,
       else: [{"user-agent", @user_agent} | headers]
+  end
+
+  defp trace_headers(headers)
+
+  if @trace_settings do
+    defp trace_headers(headers) do
+      id = Keyword.get(Logger.metadata(), @trace_key, false)
+
+      if is_binary(id) and not List.keymember?(headers, @trace_header, 0) do
+        [{@trace_header, id} | headers]
+      else
+        headers
+      end
+    end
+  else
+    defp trace_headers(headers), do: headers
   end
 
   @spec settings(Keyword.t()) :: list
