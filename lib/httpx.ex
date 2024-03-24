@@ -3,7 +3,7 @@ defmodule HTTPX do
   Simple HTTP(s) client with integrated auth methods.
   """
   use HTTPX.Log
-  alias HTTPX.{Request, RequestError, Response}
+  alias HTTPX.{Request, RequestError, Response, Telemetry}
 
   @type post_body ::
           binary
@@ -111,6 +111,7 @@ defmodule HTTPX do
       fail: fail
     } = __MODULE__.Process.pre_request(request)
 
+    h = h ++ Telemetry.start_span(m, u)
     Log.log(m, u, h, b)
     response = :hackney.request(m, u, h, b, s)
     Log.log(m, u, h, b, response)
@@ -118,6 +119,7 @@ defmodule HTTPX do
     case response
          |> __MODULE__.Process.post_request()
          |> parse_response(format, s)
+         |> Telemetry.end_span()
          |> handle_response(fail) do
       {:ok, response} -> __MODULE__.Process.post_parse(response)
       error -> error

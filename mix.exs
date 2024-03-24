@@ -5,7 +5,7 @@ defmodule Httpx.Mixfile do
     [
       app: :httpx,
       description: "Simple Elixir library with HTTP[S] helpers.",
-      version: "0.1.8",
+      version: "0.1.9",
       elixir: "~> 1.4",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -65,8 +65,11 @@ defmodule Httpx.Mixfile do
       {:hackney, "~> 1.17"},
       {:jason, "~> 1.2"},
       {:brotli, "~> 0.2", optional: true},
+      {:opentelemetry_api, "~> 1.3", optional: true},
 
       # Dev / Test
+      {:opentelemetry, "~> 1.4", only: [:dev]},
+      {:opentelemetry_exporter, ">= 0.0.0", only: [:dev]},
       {:heimdallr, ">= 0.0.3", only: [:dev, :test]}
     ]
   end

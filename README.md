@@ -5,7 +5,6 @@
 [![Coverage Status](https://coveralls.io/repos/github/IanLuites/httpx/badge.svg?branch=master)](https://coveralls.io/github/IanLuites/httpx?branch=master)
 [![Hex.pm](https://img.shields.io/hexpm/l/httpx.svg "License")](LICENSE)
 
-
 Elixir HTTP client with plug like processors.
 
 ## Quick Setup
@@ -65,13 +64,14 @@ It is also possible to chang the default pool name by setting:
 ```elixir
 config :httpx, default_pool: :custom_pool_name
 ```
+
 _(Note: the name needs to be an atom.)_
 
 ### SSL / TLS
 
 SSL options can be passed as `:ssl_options`.
 
-Certificate validation is always performed with the CA bundle adapted from Mozilla by https://certifi.io  in the [certifi](https://hex.pm/packages/certifi) package.
+Certificate validation is always performed with the CA bundle adapted from Mozilla by https://certifi.io in the [certifi](https://hex.pm/packages/certifi) package.
 
 By default certificates are verified to a a depth of level 2, which means the path can be PEER, CA, CA, ROOT-CA, and so on.
 
@@ -130,6 +130,7 @@ The `init/1` can be called once per request,
 when `:httpx` is running in dynamic mode.
 
 For example configuring a tracking header:
+
 ```
 @impl HTTPX.Processor
 def init(opts) do
@@ -147,12 +148,14 @@ or add to the details of a request, before it is
 performed.
 
 For example this adds a custom tracking header to all requests:
+
 ```
 @impl HTTPX.Processor
 def pre_request(req = %{headers: req_headers}, %{header: header}) do
   {:ok, %{req | headers: [{header, "..."} | req_headers]}}
 end
 ```
+
 (Note the `header` comes from the `init/1` above.)
 
 #### post_request/2
@@ -172,6 +175,7 @@ in the result.
 
 This module has no real life use and is just
 an example.
+
 ```
 defmodule MyProcessor do
   use HTTPX.Processor
@@ -199,28 +203,34 @@ end
 
 ## Changelog
 
+### 0.1.9 (2023-03-24)
+
+New features:
+
+- [`OpenTelemetry`](https://opentelemetry.io/docs/languages/erlang/) integration.
+
 ### 0.1.0 (2020-06-17)
 
 New features:
 
-* `HTTPX.Request` module to store request information and allow for request replays.
-* `HTTPX.Auth` can now modify more than headers.
-* Processors that allow for modifications to requests on a project/application level.
-* Configure (or disable) the default pool.
+- `HTTPX.Request` module to store request information and allow for request replays.
+- `HTTPX.Auth` can now modify more than headers.
+- Processors that allow for modifications to requests on a project/application level.
+- Configure (or disable) the default pool.
 
 Changes:
 
-* `HTTPX.Auth` now applies to a `HTTPX.Request` and not a tuple.
-* `HTTPX.Auth` now returns a [modified] `HTTPX.Request` and not a list of headers.
-* SSL certificates are now verified by default. Use `config :httpx, ssl_verify: false` to disable verification.
+- `HTTPX.Auth` now applies to a `HTTPX.Request` and not a tuple.
+- `HTTPX.Auth` now returns a [modified] `HTTPX.Request` and not a list of headers.
+- SSL certificates are now verified by default. Use `config :httpx, ssl_verify: false` to disable verification.
 
 Optimizations:
 
-* On load HTTPX optimizes the configured processors.
+- On load HTTPX optimizes the configured processors.
 
 Bug fixes:
 
-* ...
+- ...
 
 ## License
 
